@@ -4,7 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { Package, Wrench, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Barang, Jasa, Paket, PaketItem } from "@/lib/types";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, hitungTotalSetelahDiskon } from "@/lib/format";
 import { Toggle } from "@/components/ui/Toggle";
 import { ItemPickerSection } from "@/components/barang/ItemPickerSection";
 
@@ -77,7 +77,7 @@ export function TambahPaketModal({ item, barangList, jasaList, onClose, onCreate
     for (const item of items) {
       const price = unitPriceOf(item, barangList, jasaList);
       total += price * item.qty;
-      afterDiskon += price * item.qty * (1 - item.diskonPersen / 100);
+      afterDiskon += hitungTotalSetelahDiskon(price * item.qty, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
     }
     return { totalSatuan: total, hargaPaket: afterDiskon };
   }, [items, barangList, jasaList]);
@@ -85,7 +85,7 @@ export function TambahPaketModal({ item, barangList, jasaList, onClose, onCreate
   function addItem(tipe: "barang" | "jasa", itemId: string) {
     if (!itemId || items.some((i) => i.tipe === tipe && i.itemId === itemId)) return;
     const satuan = tipe === "barang" ? defaultSatuanOf(barangList.find((b) => b.id === itemId)) : undefined;
-    setItems((prev) => [...prev, { tipe, itemId, satuan, qty: 1, diskonPersen: 0 }]);
+    setItems((prev) => [...prev, { tipe, itemId, satuan, qty: 1, diskonTipe: "persen", diskonPersen: 0, diskonRp: 0 }]);
   }
 
   function updateItem(index: number, patch: Partial<PaketItem>) {

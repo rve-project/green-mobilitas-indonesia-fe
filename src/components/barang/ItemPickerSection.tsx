@@ -2,15 +2,19 @@
 
 import { ReactNode, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, hitungTotalSetelahDiskon } from "@/lib/format";
 import { Select } from "@/components/ui/Select";
+import { DiskonItemInput } from "@/components/ui/DiskonItemInput";
+import type { DiskonTipe } from "@/lib/types";
 
 export interface PickableItem {
   tipe: "barang" | "jasa";
   itemId: string;
   satuan?: string;
   qty: number;
+  diskonTipe?: DiskonTipe;
   diskonPersen: number;
+  diskonRp?: number;
 }
 
 interface UnitOption {
@@ -108,7 +112,7 @@ export function ItemPickerSection<T extends PickableItem>({
           {items.map((item) => {
             const unitOptions = unitOptionsOf?.(item);
             const price = priceOf(item);
-            const subtotal = price * item.qty * (1 - item.diskonPersen / 100);
+            const subtotal = hitungTotalSetelahDiskon(price * item.qty, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
             return (
               <li key={`${item.tipe}-${item.itemId}`} className="rounded-lg border border-zinc-200 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -156,22 +160,12 @@ export function ItemPickerSection<T extends PickableItem>({
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-zinc-500">Diskon</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={item.diskonPersen}
-                        onChange={(e) =>
-                          onUpdate(item, { diskonPersen: Number(e.target.value) || 0 } as Partial<T>)
-                        }
-                        className="w-full rounded-lg border border-zinc-200 py-1.5 pl-2 pr-6 text-right text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                        aria-label="Diskon"
-                      />
-                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">
-                        %
-                      </span>
-                    </div>
+                    <DiskonItemInput
+                      tipe={item.diskonTipe ?? "persen"}
+                      persen={item.diskonPersen}
+                      rupiah={item.diskonRp ?? 0}
+                      onChange={(patch) => onUpdate(item, patch as Partial<T>)}
+                    />
                   </div>
                   <div className="text-right">
                     <p className="mb-1 text-xs text-zinc-500">Subtotal</p>

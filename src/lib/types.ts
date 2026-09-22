@@ -147,7 +147,9 @@ export interface PaketItem {
   itemId: string;
   satuan?: string;
   qty: number;
+  diskonTipe?: DiskonTipe;
   diskonPersen: number;
+  diskonRp?: number;
 }
 
 export interface Paket {
