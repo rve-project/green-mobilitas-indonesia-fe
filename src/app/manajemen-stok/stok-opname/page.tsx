@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { Download, Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { StokOpname } from "@/lib/types";
 import { formatDateLong, withinLastDays } from "@/lib/format";
@@ -25,6 +25,19 @@ export default function StokOpnamePage() {
   const [periodDays, setPeriodDays] = useState(30);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [exporting, setExporting] = useState(false);
+
+  // Exports with the same period + search filter the list is showing.
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await api.exportStokOpname({ days: periodDays, search });
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Gagal export stok opname");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     api.stokOpname().then(setStokOpname);
@@ -57,14 +70,25 @@ export default function StokOpnamePage() {
         title="Stok Opname"
         subtitle="Cocokkan stok fisik dengan stok sistem dan catat penyesuaiannya"
         action={
-          <button
-            type="button"
-            onClick={() => router.push("/manajemen-stok/stok-opname/baru")}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
-          >
-            <Plus className="h-4 w-4" />
-            Stok Opname Baru
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || !filtered || filtered.length === 0}
+              className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-60"
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? "Mengekspor..." : "Export"}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/manajemen-stok/stok-opname/baru")}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4" />
+              Stok Opname Baru
+            </button>
+          </div>
         }
       />
 

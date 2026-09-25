@@ -205,6 +205,11 @@ export const api = {
   pembayaranHutang: () => get<PembayaranHutang[]>("/pembayaran-hutang"),
   pengeluaranLain: () => get<PengeluaranLain[]>("/pengeluaran-lain"),
   stokOpname: () => get<StokOpname[]>("/stok-opname"),
+  exportStokOpname: (params: { days: number; search?: string }) => {
+    const qs = new URLSearchParams({ days: String(params.days) });
+    if (params.search?.trim()) qs.set("search", params.search.trim());
+    return downloadFile(`/stok-opname/export?${qs}`, "stok-opname.xlsx");
+  },
   getStokOpname: (id: string) => get<StokOpname>(`/stok-opname/${id}`),
   penerimaanBarang: () => get<PenerimaanBarang[]>("/penerimaan-barang"),
   getPenerimaanBarang: (id: string) => get<PenerimaanBarang>(`/penerimaan-barang/${id}`),
