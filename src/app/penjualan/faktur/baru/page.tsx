@@ -771,6 +771,7 @@ export default function BuatInvoicePenjualanPage() {
                       }
                     }}
                     options={pelangganList.map((p) => ({ id: p.id, label: p.nama, sublabel: p.telepon }))}
+                    onAddNew={() => setShowTambahPelanggan(true)}
                     placeholder="Cari nama pelanggan..."
                   />
                 )}
