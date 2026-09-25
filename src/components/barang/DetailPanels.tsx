@@ -5,8 +5,9 @@ import clsx from "clsx";
 import { Ban, CheckCircle2, Package, Pencil, Trash2, Wrench, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
-import { Barang, Jasa, Paket, Supplier } from "@/lib/types";
+import { Barang, Jasa, Paket, PaketItem, Supplier } from "@/lib/types";
 import { formatDateLong, formatRupiah } from "@/lib/format";
+import { hargaSatuanPaketItem, hitungHargaPaket, subtotalPaketItem } from "@/lib/paket";
 
 function DrawerShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
@@ -335,23 +336,13 @@ export function PaketDetailPanel({ paket, barangList, jasaList, onClose, onEdit,
     }
   }
 
-  function hargaSatuan(itemId: string, tipe: "barang" | "jasa") {
-    return tipe === "barang"
-      ? barangList.find((b) => b.id === itemId)?.hargaJual ?? 0
-      : jasaList.find((j) => j.id === itemId)?.harga ?? 0;
-  }
-
   function namaItem(itemId: string, tipe: "barang" | "jasa") {
     return tipe === "barang"
       ? barangList.find((b) => b.id === itemId)?.nama ?? "Barang dihapus"
       : jasaList.find((j) => j.id === itemId)?.nama ?? "Jasa dihapus";
   }
 
-  const totalSatuan = paket.items.reduce((sum, i) => sum + hargaSatuan(i.itemId, i.tipe) * i.qty, 0);
-  const hargaPaket = paket.items.reduce(
-    (sum, i) => sum + hargaSatuan(i.itemId, i.tipe) * i.qty * (1 - i.diskonPersen / 100),
-    0
-  );
+  const { totalSatuan, hargaPaket } = hitungHargaPaket(paket.items, barangList, jasaList);
   const hemat = Math.max(0, totalSatuan - hargaPaket);
   const hematPersen = totalSatuan > 0 ? (hemat / totalSatuan) * 100 : 0;
 
@@ -406,9 +397,9 @@ export function PaketDetailPanel({ paket, barangList, jasaList, onClose, onEdit,
               <PaketItemRow
                 key={idx}
                 nama={namaItem(i.itemId, "barang")}
-                qty={i.qty}
-                diskonPersen={i.diskonPersen}
-                hargaAsli={hargaSatuan(i.itemId, "barang")}
+                item={i}
+                hargaAsli={hargaSatuanPaketItem(i, barangList, jasaList) * i.qty}
+                hargaSetelahDiskon={subtotalPaketItem(i, barangList, jasaList)}
               />
             ))}
           </ul>
@@ -424,9 +415,9 @@ export function PaketDetailPanel({ paket, barangList, jasaList, onClose, onEdit,
               <PaketItemRow
                 key={idx}
                 nama={namaItem(i.itemId, "jasa")}
-                qty={i.qty}
-                diskonPersen={i.diskonPersen}
-                hargaAsli={hargaSatuan(i.itemId, "jasa")}
+                item={i}
+                hargaAsli={hargaSatuanPaketItem(i, barangList, jasaList) * i.qty}
+                hargaSetelahDiskon={subtotalPaketItem(i, barangList, jasaList)}
               />
             ))}
           </ul>
@@ -446,30 +437,27 @@ export function PaketDetailPanel({ paket, barangList, jasaList, onClose, onEdit,
 
 function PaketItemRow({
   nama,
-  qty,
-  diskonPersen,
+  item,
   hargaAsli,
+  hargaSetelahDiskon,
 }: {
   nama: string;
-  qty: number;
-  diskonPersen: number;
+  item: PaketItem;
   hargaAsli: number;
+  hargaSetelahDiskon: number;
 }) {
-  const hargaSetelahDiskon = hargaAsli * (1 - diskonPersen / 100);
+  const adaDiskon = hargaSetelahDiskon < hargaAsli;
+  const labelDiskon = item.diskonTipe === "rupiah" ? `Diskon ${formatRupiah(item.diskonRp ?? 0)}` : `Diskon ${item.diskonPersen}%`;
   return (
     <li className="rounded-lg bg-zinc-50 p-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-zinc-900">{nama}</p>
-        <span className="text-xs text-zinc-500">× {qty}</span>
+        <span className="text-xs text-zinc-500">× {item.qty}</span>
       </div>
       <div className="mt-1 flex items-center justify-between">
-        {diskonPersen > 0 ? (
-          <span className="text-xs font-medium text-green-600">Diskon {diskonPersen}%</span>
-        ) : (
-          <span />
-        )}
+        {adaDiskon ? <span className="text-xs font-medium text-green-600">{labelDiskon}</span> : <span />}
         <div className="text-right text-xs">
-          {diskonPersen > 0 && <p className="text-zinc-400 line-through">{formatRupiah(hargaAsli)}</p>}
+          {adaDiskon && <p className="text-zinc-400 line-through">{formatRupiah(hargaAsli)}</p>}
           <p className="font-semibold text-zinc-900">{formatRupiah(hargaSetelahDiskon)}</p>
         </div>
       </div>

@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Invoice, Jasa, Kendaraan, Lookup, Pelanggan, Pembayaran } from "@/lib/types";
-import { formatDateFull, formatRupiah } from "@/lib/format";
+import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon, labelDiskon } from "@/lib/format";
 
 interface DetailInvoiceModalProps {
   invoiceId: string;
@@ -279,7 +279,7 @@ export function DetailInvoiceModal({
                   </p>
                   <div className="space-y-3">
                     {invoice.items.map((item, i) => {
-                      const rowTotal = item.qty * item.hargaSatuan * (1 - item.diskonPersen / 100);
+                      const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
                       const jasaKomisi =
                         item.tipe === "jasa" ? jasaList.find((j) => j.id === item.itemId)?.komisi : undefined;
                       const komisiNominal = jasaKomisi ? (rowTotal * jasaKomisi) / 100 : 0;
@@ -300,7 +300,7 @@ export function DetailInvoiceModal({
                               <p className="text-xs text-zinc-400">
                                 {item.qty} {item.tipe === "jasa" ? "Layanan" : (item.satuan ?? "")} · @{" "}
                                 {formatRupiah(item.hargaSatuan)}
-                                {item.diskonPersen > 0 ? ` · disc ${item.diskonPersen}%` : ""}
+                                {labelDiskon(item) ? ` · ${labelDiskon(item)}` : ""}
                               </p>
                               {komisiNominal > 0 && (
                                 <span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">

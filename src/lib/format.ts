@@ -28,6 +28,12 @@ export function hitungTotalSetelahDiskon(
   return subtotalKotor * (1 - diskonPersen / 100);
 }
 
+/** "disc 10%" / "disc Rp 10.000", or "" when the line has no discount. */
+export function labelDiskon(item: { diskonTipe?: DiskonTipe; diskonPersen: number; diskonRp?: number }) {
+  if (item.diskonTipe === "rupiah") return (item.diskonRp ?? 0) > 0 ? `disc ${formatRupiah(item.diskonRp ?? 0)}` : "";
+  return item.diskonPersen > 0 ? `disc ${item.diskonPersen}%` : "";
+}
+
 export function formatDate(iso: string) {
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",

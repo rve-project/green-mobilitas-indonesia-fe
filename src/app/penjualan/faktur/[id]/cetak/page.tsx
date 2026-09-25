@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
 import { api } from "@/lib/api";
 import { CompanyProfile, Invoice, Kendaraan, Pelanggan } from "@/lib/types";
-import { formatDateFull, formatRupiah } from "@/lib/format";
+import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon, labelDiskon } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 
 type Jenis = "invoice" | "proforma" | "kwitansi";
@@ -223,8 +223,8 @@ function A4Document({
             </thead>
             <tbody>
               {invoice.items.map((item, i) => {
-                const rowTotal = item.qty * item.hargaSatuan * (1 - item.diskonPersen / 100);
-                const rowDiskon = item.qty * item.hargaSatuan * (item.diskonPersen / 100);
+                const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
+                const rowDiskon = item.qty * item.hargaSatuan - rowTotal;
                 return (
                   <tr key={`${item.itemId}-${i}`} className="border-b border-zinc-200">
                     <td className="px-3 py-2">{item.nama}</td>
@@ -356,14 +356,14 @@ function DotMatrixDocument({
           {invoice.kilometer !== undefined && <p>KM : {invoice.kilometer}</p>}
           <div className="my-1 border-t border-dashed border-black" />
           {invoice.items.map((item, i) => {
-            const rowTotal = item.qty * item.hargaSatuan * (1 - item.diskonPersen / 100);
+            const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
             return (
               <div key={`${item.itemId}-${i}`} className="mb-0.5">
                 <p>{item.nama}</p>
                 <div className="flex justify-between">
                   <span>
                     {item.qty} {item.tipe === "jasa" ? "Jasa" : (item.satuan ?? "")} x {formatRupiah(item.hargaSatuan)}
-                    {item.diskonPersen > 0 ? ` (disc ${item.diskonPersen}%)` : ""}
+                    {labelDiskon(item) ? ` (${labelDiskon(item)})` : ""}
                   </span>
                   <span>{formatRupiah(rowTotal)}</span>
                 </div>

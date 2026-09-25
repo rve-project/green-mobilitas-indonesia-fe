@@ -4,7 +4,8 @@ import { FormEvent, useMemo, useState } from "react";
 import { Package, Wrench, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Barang, Jasa, Paket, PaketItem } from "@/lib/types";
-import { formatRupiah, hitungTotalSetelahDiskon } from "@/lib/format";
+import { formatRupiah } from "@/lib/format";
+import { hargaSatuanPaketItem as unitPriceOf, hitungHargaPaket } from "@/lib/paket";
 import { Toggle } from "@/components/ui/Toggle";
 import { ItemPickerSection } from "@/components/barang/ItemPickerSection";
 
@@ -18,16 +19,6 @@ interface TambahPaketModalProps {
 
 const inputClass =
   "w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500";
-
-function unitPriceOf(item: PaketItem, barangList: Barang[], jasaList: Jasa[]) {
-  if (item.tipe === "barang") {
-    const barang = barangList.find((b) => b.id === item.itemId);
-    if (!barang) return 0;
-    const unit = barang.units.find((u) => u.satuan === item.satuan);
-    return unit?.hargaJual ?? barang.hargaJual;
-  }
-  return jasaList.find((j) => j.id === item.itemId)?.harga ?? 0;
-}
 
 function nameOf(item: PaketItem, barangList: Barang[], jasaList: Jasa[]) {
   if (item.tipe === "barang") return barangList.find((b) => b.id === item.itemId)?.nama ?? "Barang dihapus";
@@ -71,16 +62,10 @@ export function TambahPaketModal({ item, barangList, jasaList, onClose, onCreate
   const barangItems = items.filter((i) => i.tipe === "barang");
   const jasaItems = items.filter((i) => i.tipe === "jasa");
 
-  const { totalSatuan, hargaPaket } = useMemo(() => {
-    let total = 0;
-    let afterDiskon = 0;
-    for (const item of items) {
-      const price = unitPriceOf(item, barangList, jasaList);
-      total += price * item.qty;
-      afterDiskon += hitungTotalSetelahDiskon(price * item.qty, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
-    }
-    return { totalSatuan: total, hargaPaket: afterDiskon };
-  }, [items, barangList, jasaList]);
+  const { totalSatuan, hargaPaket } = useMemo(
+    () => hitungHargaPaket(items, barangList, jasaList),
+    [items, barangList, jasaList]
+  );
 
   function addItem(tipe: "barang" | "jasa", itemId: string) {
     if (!itemId || items.some((i) => i.tipe === tipe && i.itemId === itemId)) return;

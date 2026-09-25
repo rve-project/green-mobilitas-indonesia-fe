@@ -6,6 +6,7 @@ import { Download, FileSpreadsheet, Plus, Search, Upload, X } from "lucide-react
 import { api, ImportSummary } from "@/lib/api";
 import { Barang, Jasa, Paket, Supplier } from "@/lib/types";
 import { formatRupiah } from "@/lib/format";
+import { hitungHargaPaket } from "@/lib/paket";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
@@ -509,13 +510,7 @@ function PaketTable({
   if (data.length === 0) return <EmptyState label="Belum ada data paket" />;
 
   function hargaPaket(p: Paket) {
-    return p.items.reduce((sum, item) => {
-      const price =
-        item.tipe === "barang"
-          ? barang.find((b) => b.id === item.itemId)?.hargaJual ?? 0
-          : jasa.find((j) => j.id === item.itemId)?.harga ?? 0;
-      return sum + price * item.qty * (1 - item.diskonPersen / 100);
-    }, 0);
+    return hitungHargaPaket(p.items, barang, jasa).hargaPaket;
   }
 
   return (

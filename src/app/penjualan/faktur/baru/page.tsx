@@ -25,6 +25,7 @@ import {
 import { api } from "@/lib/api";
 import { Barang, DiskonTipe, Jasa, Kendaraan, Lokasi, Lookup, PajakSetting, Paket, Pelanggan } from "@/lib/types";
 import { formatDate, formatNumberId, formatRupiah, hitungTotalSetelahDiskon, parseNumberId } from "@/lib/format";
+import { hargaSatuanPaketItem } from "@/lib/paket";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
 import { type PickableItem } from "@/components/barang/ItemPickerSection";
@@ -221,16 +222,18 @@ export default function BuatInvoicePenjualanPage() {
       const existingKeys = new Set(prev.map((i) => `${i.tipe}:${i.itemId}`));
       const exploded: WorkingItem[] = paket.items
         .filter((pi) => !existingKeys.has(`${pi.tipe}:${pi.itemId}`))
+        // Carry over everything the paket defines -- unit, discount (persen or rupiah),
+        // and that unit's price -- so the invoice lines match the paket's price.
         .map((pi) => ({
           tipe: pi.tipe,
           itemId: pi.itemId,
           qty: pi.qty,
-          diskonTipe: "persen" as const,
+          diskonTipe: pi.diskonTipe ?? "persen",
           diskonPersen: pi.diskonPersen,
-          diskonRp: 0,
+          diskonRp: pi.diskonRp ?? 0,
           fromPaketId: paket.id,
-          hargaSatuan: catalogPriceOf(pi.tipe, pi.itemId),
-          satuan: catalogUnitOf(pi.tipe, pi.itemId),
+          hargaSatuan: hargaSatuanPaketItem(pi, allBarang, allJasa),
+          satuan: pi.satuan ?? catalogUnitOf(pi.tipe, pi.itemId),
         }));
       return [...prev, ...exploded];
     });
@@ -452,7 +455,10 @@ export default function BuatInvoicePenjualanPage() {
               <label className="mb-1 block text-xs text-zinc-500">Unit</label>
               <Select
                 value={item.satuan ?? units[0] ?? ""}
-                onChange={(v) => updateWorkingItem(item, { satuan: v })}
+                onChange={(v) => {
+                  const unitPrice = allBarang.find((b) => b.id === item.itemId)?.units.find((u) => u.satuan === v)?.hargaJual;
+                  updateWorkingItem(item, { satuan: v, ...(unitPrice !== undefined ? { hargaSatuan: unitPrice } : {}) });
+                }}
                 options={units.map((u) => ({ value: u, label: u }))}
               />
             </div>

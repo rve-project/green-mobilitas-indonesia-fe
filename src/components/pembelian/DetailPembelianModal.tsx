@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Lookup, PembayaranHutang, Pembelian, Supplier } from "@/lib/types";
-import { formatDateFull, formatRupiah } from "@/lib/format";
+import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon, labelDiskon } from "@/lib/format";
 
 interface DetailPembelianModalProps {
   pembelianId: string;
@@ -237,7 +237,7 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
                   </p>
                   <div className="space-y-3">
                     {pembelian.items.map((item, i) => {
-                      const rowTotal = item.qty * item.hargaSatuan * (1 - item.diskonPersen / 100);
+                      const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
                       return (
                         <div key={`${item.itemId}-${i}`} className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3">
@@ -250,7 +250,7 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
                               <p className="text-xs text-zinc-400">
                                 {item.qty} {item.satuan ?? ""} · @ {formatRupiah(item.hargaSatuan)}
                                 {item.lokasi ? ` · ${item.lokasi}` : ""}
-                                {item.diskonPersen > 0 ? ` · disc ${item.diskonPersen}%` : ""}
+                                {labelDiskon(item) ? ` · ${labelDiskon(item)}` : ""}
                               </p>
                             </div>
                           </div>
