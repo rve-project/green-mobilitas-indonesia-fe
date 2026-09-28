@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ArrowLeft, ClipboardList, Save, Search } from "lucide-react";
+import { ClipboardList, Save, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { Barang, Lokasi } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Select } from "@/components/ui/Select";
 import { DateInput } from "@/components/ui/DateInput";
 
@@ -110,17 +111,10 @@ export default function StokOpnameBaruPage() {
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div>
+          <Breadcrumb items={[{ label: "Stok Opname", href: "/manajemen-stok/stok-opname" }, { label: "Buat Baru" }]} />
           <h1 className="text-2xl font-bold text-zinc-900">Buat Stok Opname</h1>
           <p className="text-sm text-zinc-500">Cocokkan stok fisik dengan stok sistem per lokasi</p>
         </div>
-        <button
-          type="button"
-          onClick={() => router.push("/manajemen-stok/stok-opname")}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Kembali
-        </button>
       </div>
 
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

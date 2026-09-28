@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import clsx from "clsx";
-import { ArrowLeft, Calendar, CheckCircle2, Package, User } from "lucide-react";
+import { Calendar, CheckCircle2, Package, User } from "lucide-react";
 import { api } from "@/lib/api";
 import { PenerimaanBarang } from "@/lib/types";
 import { formatDateFull, formatRupiah } from "@/lib/format";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 
 function StatusBadge({ status }: { status: PenerimaanBarang["status"] }) {
   const config = {
@@ -22,7 +23,6 @@ function StatusBadge({ status }: { status: PenerimaanBarang["status"] }) {
 
 export default function PenerimaanBarangDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [item, setItem] = useState<PenerimaanBarang | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [posting, setPosting] = useState(false);
@@ -65,19 +65,15 @@ export default function PenerimaanBarangDetailPage() {
   return (
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/manajemen-stok/penerimaan-barang")}
-            aria-label="Kembali"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 hover:bg-zinc-50"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Good Receipt #{item.kode}</h1>
-            <p className="text-sm text-zinc-500">Lihat detail penerimaan barang</p>
-          </div>
+        <div>
+          <Breadcrumb
+            items={[
+              { label: "Penerimaan Barang", href: "/manajemen-stok/penerimaan-barang" },
+              { label: `#${item.kode}` },
+            ]}
+          />
+          <h1 className="text-2xl font-bold text-zinc-900">Good Receipt #{item.kode}</h1>
+          <p className="text-sm text-zinc-500">Lihat detail penerimaan barang</p>
         </div>
         {item.status === "draft" && (
           <button

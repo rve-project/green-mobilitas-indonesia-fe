@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
-  ArrowLeft,
   Building2,
   Calendar,
   ChevronUp,
@@ -26,6 +25,7 @@ import {
 import { api } from "@/lib/api";
 import { Barang, DiskonTipe, Lokasi, Lookup, PajakSetting, Supplier } from "@/lib/types";
 import { formatDate, formatNumberId, formatRupiah, hitungTotalSetelahDiskon, parseNumberId } from "@/lib/format";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
 import { DiskonItemInput } from "@/components/ui/DiskonItemInput";
@@ -430,19 +430,12 @@ export default function BuatInvoicePembelianPage() {
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div>
+          <Breadcrumb items={[{ label: "Faktur Pembelian", href: "/pembelian/faktur" }, { label: "Buat Invoice" }]} />
           <h1 className="text-2xl font-bold text-zinc-900">Buat Invoice Pembelian</h1>
           <p className="text-sm text-zinc-500">
             {STEPS[step]} • Tanggal: {todayLabel}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => router.push("/pembelian/faktur")}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Kembali
-        </button>
       </div>
 
       <StepBar step={step} />

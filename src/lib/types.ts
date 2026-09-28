@@ -231,6 +231,7 @@ export interface Pembayaran {
   tanggal: string;
   jumlah: number;
   metode?: string;
+  catatan?: string;
   createdAt: string;
 }
 
@@ -582,6 +583,8 @@ export interface User {
   nama: string;
   email: string;
   role: UserRole;
+  /** Optional per-user menu restriction. Undefined = full access for the role (backward compatible default). */
+  allowedModules?: string[];
   aktif: boolean;
   createdAt: string;
 }

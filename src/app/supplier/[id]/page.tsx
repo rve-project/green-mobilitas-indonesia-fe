@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
 import { Pembelian, Supplier } from "@/lib/types";
 import { formatDateLong, formatRupiah } from "@/lib/format";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { EmptyState } from "@/components/ui/Panel";
 import { TambahSupplierModal } from "@/components/supplier/TambahSupplierModal";
 
@@ -121,13 +122,7 @@ export default function SupplierDetailPage() {
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link
-            href="/supplier"
-            className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali ke Supplier
-          </Link>
+          <Breadcrumb items={[{ label: "Supplier", href: "/supplier" }, { label: supplier.nama }]} />
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-zinc-900">{supplier.nama}</h1>
             <StatusBadge status={supplier.status} />

@@ -1,10 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
 import { USER_ROLE_LABELS, USER_ROLE_OPTIONS, User, UserRole } from "@/lib/types";
+import { MODULE_KEYS, MODULE_LABELS, MODULE_ROLES } from "@/lib/permissions";
 import { Select } from "@/components/ui/Select";
+
+const SELECTABLE_MODULES = MODULE_KEYS.filter((m) => m !== "dashboard");
 
 interface TambahUserModalProps {
   user?: User;
@@ -23,20 +26,47 @@ export function TambahUserModal({ user, onClose, onSaved }: TambahUserModalProps
   const [role, setRole] = useState<UserRole>(user?.role ?? "staff");
   const [aktif, setAktif] = useState(user?.aktif ?? true);
 
+  const availableModules = useMemo(() => SELECTABLE_MODULES.filter((m) => MODULE_ROLES[m].includes(role)), [role]);
+
+  const [modules, setModules] = useState<Set<string>>(() => {
+    const forRole = SELECTABLE_MODULES.filter((m) => MODULE_ROLES[m].includes(user?.role ?? "staff"));
+    if (user?.allowedModules) {
+      const allowed = new Set(user.allowedModules);
+      return new Set(forRole.filter((m) => allowed.has(m)));
+    }
+    return new Set(forRole);
+  });
+
+  function handleRoleChange(nextRole: UserRole) {
+    setRole(nextRole);
+    setModules(new Set(SELECTABLE_MODULES.filter((m) => MODULE_ROLES[m].includes(nextRole))));
+  }
+
+  function toggleModule(m: string) {
+    setModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(m)) next.delete(m);
+      else next.add(m);
+      return next;
+    });
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
+      const allowedModules = Array.from(modules);
       const saved = isEdit
         ? await api.updateUser(user!.id, {
             nama,
             email,
             role,
             aktif,
+            allowedModules,
             ...(password ? { password } : {}),
           })
-        : await api.createUser({ nama, email, password, role, aktif });
+        : await api.createUser({ nama, email, password, role, aktif, allowedModules });
       onSaved(saved);
       onClose();
     } catch (err) {
@@ -103,10 +133,42 @@ export function TambahUserModal({ user, onClose, onSaved }: TambahUserModalProps
             <span className="mb-1.5 block text-sm font-medium text-zinc-700">Role</span>
             <Select
               value={role}
-              onChange={(v) => setRole(v as UserRole)}
+              onChange={(v) => handleRoleChange(v as UserRole)}
               options={USER_ROLE_OPTIONS.map((r) => ({ value: r, label: USER_ROLE_LABELS[r] }))}
             />
           </label>
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-sm font-medium text-zinc-700">Akses Menu</span>
+              <div className="flex gap-2 text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setModules(new Set(availableModules))}
+                  className="text-green-600 hover:underline"
+                >
+                  Pilih Semua
+                </button>
+                <button type="button" onClick={() => setModules(new Set())} className="text-zinc-400 hover:underline">
+                  Kosongkan
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-zinc-200 p-3">
+              {availableModules.map((m) => (
+                <label key={m} className="flex items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="checkbox"
+                    checked={modules.has(m)}
+                    onChange={() => toggleModule(m)}
+                    className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                  />
+                  {MODULE_LABELS[m]}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-zinc-400">Menu yang tidak dicentang tidak akan tampil untuk user ini.</p>
+          </div>
 
           <label className="flex items-center gap-2 text-sm text-zinc-600">
             <input

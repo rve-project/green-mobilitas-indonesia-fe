@@ -9,6 +9,7 @@ interface RupiahInputProps {
   className?: string;
   id?: string;
   required?: boolean;
+  disabled?: boolean;
   "aria-label"?: string;
 }
 

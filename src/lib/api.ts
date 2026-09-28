@@ -120,6 +120,31 @@ async function downloadFile(path: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+async function downloadFilePost(path: string, filename: string, body: unknown) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => null);
+    throw new Error(errBody?.message ?? `Gagal mengunduh ${path} (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   pelanggan: (params?: { search?: string; status?: string }) => {
     const qs = new URLSearchParams();
@@ -238,6 +263,8 @@ export const api = {
   deleteBarang: (id: string) => del<void>(`/barang/${id}`),
   downloadBarangTemplate: () => downloadFile("/barang/template", "template-barang.xlsx"),
   exportBarang: () => downloadFile("/barang/export", "data-barang.xlsx"),
+  exportLaporanXlsx: (data: { sheetName: string; headers: string[]; rows: (string | number)[][]; filename: string }) =>
+    downloadFilePost("/laporan/export-xlsx", data.filename, data),
   importBarang: (file: File) => uploadFile<ImportSummary>("/barang/import", file),
   updateJasa: (id: string, data: Partial<Omit<Jasa, "id" | "createdAt">>) => put<Jasa>(`/jasa/${id}`, data),
   deleteJasa: (id: string) => del<void>(`/jasa/${id}`),
@@ -271,8 +298,32 @@ export const api = {
     }[];
   }) => post<Invoice>("/invoice", data),
   getInvoice: (id: string) => get<Invoice>(`/invoice/${id}`),
-  updateInvoice: (id: string, data: Partial<Pick<Invoice, "status" | "dibayar">>) =>
-    put<Invoice>(`/invoice/${id}`, data),
+  updateInvoice: (
+    id: string,
+    data: Partial<Pick<Invoice, "status" | "dibayar">> & {
+      pelangganId?: string;
+      kendaraanIds?: string[];
+      kilometer?: number;
+      tanggal?: string;
+      jatuhTempo?: string;
+      syaratPembayaran?: string;
+      catatan?: string;
+      keluhan?: string;
+      potonganPersen?: number;
+      items?: {
+        tipe: "barang" | "jasa";
+        itemId: string;
+        qty: number;
+        diskonTipe?: DiskonTipe;
+        diskonPersen: number;
+        diskonRp?: number;
+        hargaSatuan?: number;
+        lokasi?: string;
+        satuan?: string;
+      }[];
+    }
+  ) => put<Invoice>(`/invoice/${id}`, data),
+  deleteInvoice: (id: string) => del<void>(`/invoice/${id}`),
   createRetur: (data: {
     invoiceId: string;
     tanggal?: string;
@@ -294,8 +345,10 @@ export const api = {
       status: Retur["status"];
     }>
   ) => put<Retur>(`/retur/${id}`, data),
-  createPembayaran: (data: { invoiceId: string; tanggal?: string; jumlah: number; metode?: string }) =>
+  createPembayaran: (data: { invoiceId: string; tanggal?: string; jumlah: number; metode?: string; catatan?: string }) =>
     post<Pembayaran>("/pembayaran", data),
+  updatePembayaran: (id: string, data: { tanggal?: string; jumlah?: number; metode?: string; catatan?: string }) =>
+    put<Pembayaran>(`/pembayaran/${id}`, data),
   createPemasukanLain: (data: Omit<PemasukanLain, "id" | "createdAt">) =>
     post<PemasukanLain>("/pemasukan-lain", data),
   createPosisi: (data: Omit<Posisi, "id" | "kode" | "createdAt">) => post<Posisi>("/posisi", data),
@@ -383,11 +436,24 @@ export const api = {
   me: () => get<User>("/auth/me"),
   users: () => get<User[]>("/users"),
   getUser: (id: string) => get<User>(`/users/${id}`),
-  createUser: (data: { nama: string; email: string; password: string; role: UserRole; aktif?: boolean }) =>
-    post<User>("/users", data),
+  createUser: (data: {
+    nama: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    allowedModules?: string[];
+    aktif?: boolean;
+  }) => post<User>("/users", data),
   updateUser: (
     id: string,
-    data: Partial<{ nama: string; email: string; password: string; role: UserRole; aktif: boolean }>
+    data: Partial<{
+      nama: string;
+      email: string;
+      password: string;
+      role: UserRole;
+      allowedModules: string[];
+      aktif: boolean;
+    }>
   ) => put<User>(`/users/${id}`, data),
   deleteUser: (id: string) => del<void>(`/users/${id}`),
 };

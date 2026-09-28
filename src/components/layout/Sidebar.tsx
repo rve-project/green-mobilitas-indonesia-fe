@@ -97,7 +97,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const visibleSections = navSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !user || canAccess(user.role, item.module)),
+      items: section.items.filter((item) => !user || canAccess(user, item.module)),
     }))
     .filter((section) => section.items.length > 0);
 

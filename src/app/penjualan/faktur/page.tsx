@@ -250,6 +250,10 @@ export default function FakturPenjualanPage() {
           kendaraanList={kendaraan}
           onClose={() => setSelectedId(null)}
           onNavigate={setSelectedId}
+          onDeleted={(id) => {
+            setInvoice((prev) => prev?.filter((inv) => inv.id !== id) ?? null);
+            setSelectedId(null);
+          }}
         />
       )}
     </div>

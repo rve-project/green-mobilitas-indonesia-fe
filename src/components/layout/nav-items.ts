@@ -1,6 +1,7 @@
 import {
   Building2,
   ClipboardList,
+  FileBarChart,
   Home,
   MapPin,
   Package,
@@ -80,6 +81,7 @@ export const navSections: NavSection[] = [
       { label: "Pelanggan", href: "/pelanggan", icon: Users, module: "pelanggan" },
       { label: "Supplier", href: "/supplier", icon: Building2, module: "supplier" },
       { label: "Manajemen Karyawan", href: "/manajemen-karyawan", icon: UserCog, module: "manajemen-karyawan" },
+      { label: "Laporan", href: "/laporan", icon: FileBarChart, module: "laporan" },
     ],
   },
   {

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, Plus, Save, Trash2 } from "lucide-react";
+import { FileText, Plus, Save, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Barang, Lokasi } from "@/lib/types";
 import { formatRupiah } from "@/lib/format";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { IdSearchSelectField } from "@/components/ui/IdSearchSelectField";
 import { Select } from "@/components/ui/Select";
 
@@ -123,17 +124,12 @@ export default function PenerimaanBarangBaruPage() {
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div>
+          <Breadcrumb
+            items={[{ label: "Penerimaan Barang", href: "/manajemen-stok/penerimaan-barang" }, { label: "Buat Baru" }]}
+          />
           <h1 className="text-2xl font-bold text-zinc-900">Penerimaan Barang Baru</h1>
           <p className="text-sm text-zinc-500">Buat penerimaan barang baru</p>
         </div>
-        <button
-          type="button"
-          onClick={() => router.push("/manajemen-stok/penerimaan-barang")}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Kembali
-        </button>
       </div>
 
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

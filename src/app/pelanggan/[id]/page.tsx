@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
 import { Invoice, Kendaraan, Pelanggan } from "@/lib/types";
 import { formatDateLong, formatRupiah } from "@/lib/format";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { TambahPelangganModal } from "@/components/pelanggan/TambahPelangganModal";
@@ -133,13 +134,7 @@ export default function PelangganDetailPage() {
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link
-            href="/pelanggan"
-            className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali ke Pelanggan
-          </Link>
+          <Breadcrumb items={[{ label: "Pelanggan", href: "/pelanggan" }, { label: pelanggan.nama }]} />
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-zinc-900">{pelanggan.nama}</h1>
             <StatusBadge status={pelanggan.status} />

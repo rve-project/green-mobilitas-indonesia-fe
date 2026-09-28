@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
 import { Karyawan, PeriodeGaji, Posisi, SATUAN_GAJI_OPTIONS } from "@/lib/types";
 import { formatDate, formatRupiah } from "@/lib/format";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { TambahKaryawanModal } from "@/components/karyawan/TambahKaryawanModal";
@@ -102,13 +103,7 @@ export default function KaryawanDetailPage() {
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link
-            href="/manajemen-karyawan"
-            className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali ke Manajemen Karyawan
-          </Link>
+          <Breadcrumb items={[{ label: "Manajemen Karyawan", href: "/manajemen-karyawan" }, { label: karyawan.nama }]} />
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-zinc-900">{karyawan.nama}</h1>
             <StatusBadge status={karyawan.status} />

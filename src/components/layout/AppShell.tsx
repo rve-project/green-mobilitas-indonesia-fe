@@ -14,7 +14,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isLoginPage = pathname === "/login";
   const currentModule = moduleForPath(pathname);
-  const allowed = !user || !currentModule || canAccess(user.role, currentModule);
+  const allowed = !user || !currentModule || canAccess(user, currentModule);
 
   useEffect(() => {
     if (loading) return;

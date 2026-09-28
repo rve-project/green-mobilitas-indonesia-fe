@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
   ChevronDown,
@@ -48,6 +49,7 @@ function formatTime(iso: string) {
 }
 
 export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, onNavigate }: DetailPembelianModalProps) {
+  const router = useRouter();
   const [fetched, setFetched] = useState<{ id: string; pembelian: Pembelian | null; notFound: boolean }>({
     id: "",
     pembelian: null,
@@ -115,7 +117,7 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
 
   function handlePrint() {
     setDokumenOpen(false);
-    window.open(`/pembelian/faktur/${pembelianId}/cetak`, "_blank");
+    router.push(`/pembelian/faktur/${pembelianId}/cetak`);
   }
 
   return (
