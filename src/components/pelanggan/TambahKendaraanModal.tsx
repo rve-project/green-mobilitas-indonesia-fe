@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { X, FileText } from "lucide-react";
 import { api } from "@/lib/api";
 import { Kendaraan } from "@/lib/types";
-import { SearchAddField } from "@/components/ui/SearchAddField";
+import { LookupSearchSelectField } from "@/components/ui/LookupSearchSelectField";
 
 interface TambahKendaraanModalProps {
   pelangganId: string;
@@ -66,13 +66,34 @@ export function TambahKendaraanModal({ pelangganId, kendaraan, onClose, onSaved 
           ) : (
             <>
               <Field label="Tipe Kendaraan" required>
-                <SearchAddField required value={tipe} onChange={setTipe} placeholder="Cari tipe kendaraan..." />
+                <LookupSearchSelectField
+                  tipe="tipe-kendaraan"
+                  label="Tipe Kendaraan"
+                  value={tipe}
+                  onChange={setTipe}
+                  placeholder="Cari tipe kendaraan..."
+                  required
+                />
               </Field>
               <Field label="Merek Kendaraan" required>
-                <SearchAddField required value={merk} onChange={setMerk} placeholder="Cari merek kendaraan..." />
+                <LookupSearchSelectField
+                  tipe="brand-kendaraan"
+                  label="Merek Kendaraan"
+                  value={merk}
+                  onChange={setMerk}
+                  placeholder="Cari merek kendaraan..."
+                  required
+                />
               </Field>
               <Field label="Model Kendaraan" required>
-                <SearchAddField required value={model} onChange={setModel} placeholder="Cari model kendaraan..." />
+                <LookupSearchSelectField
+                  tipe="model-kendaraan"
+                  label="Model Kendaraan"
+                  value={model}
+                  onChange={setModel}
+                  placeholder="Cari model kendaraan..."
+                  required
+                />
               </Field>
             </>
           )}

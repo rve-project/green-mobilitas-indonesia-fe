@@ -35,6 +35,7 @@ import { LookupSearchSelectField } from "@/components/ui/LookupSearchSelectField
 import { RupiahInput } from "@/components/ui/RupiahInput";
 import { DateInput } from "@/components/ui/DateInput";
 import { TambahPelangganModal } from "@/components/pelanggan/TambahPelangganModal";
+import { TambahKendaraanModal } from "@/components/pelanggan/TambahKendaraanModal";
 
 type CatalogTab = "barang" | "jasa" | "paket";
 type CatalogEntry = Barang | Jasa | Paket;
@@ -319,6 +320,7 @@ export default function BuatInvoicePenjualanPage() {
   const [showTambahPelanggan, setShowTambahPelanggan] = useState(false);
   const [kendaraanIds, setKendaraanIds] = useState<string[]>([]);
   const [kendaraanPickerOpen, setKendaraanPickerOpen] = useState(false);
+  const [showTambahKendaraan, setShowTambahKendaraan] = useState(false);
   const kendaraanPickerRef = useRef<HTMLDivElement>(null);
   const [keluhan, setKeluhan] = useState("");
   const [kilometer, setKilometer] = useState("");
@@ -820,6 +822,16 @@ export default function BuatInvoicePenjualanPage() {
                         </label>
                       ))
                     )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setKendaraanPickerOpen(false);
+                        setShowTambahKendaraan(true);
+                      }}
+                      className="mt-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Tambah Kendaraan Baru
+                    </button>
                   </div>
                 )}
               </div>
@@ -1158,6 +1170,18 @@ export default function BuatInvoicePenjualanPage() {
             setPelangganList((prev) => [p, ...prev]);
             selectPelanggan(p.id);
             setShowTambahPelanggan(false);
+          }}
+        />
+      )}
+
+      {showTambahKendaraan && (
+        <TambahKendaraanModal
+          pelangganId={pelangganId}
+          onClose={() => setShowTambahKendaraan(false)}
+          onSaved={(k) => {
+            setKendaraanList((prev) => [...prev, k]);
+            setKendaraanIds((prev) => [...prev, k.id]);
+            setShowTambahKendaraan(false);
           }}
         />
       )}
