@@ -69,7 +69,7 @@ export default function CetakPembelianPage() {
         <div className="relative flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-gmi-green.png" alt="Logo" className="h-11 w-11 object-contain" />
+            <img src="/logo-gmi-green.png" alt="Logo" className="h-14 w-14 object-contain" />
             <div>
               <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
               <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
@@ -174,12 +174,6 @@ export default function CetakPembelianPage() {
             <p className="mb-20">&nbsp;</p>
             <p className="truncate border-t border-zinc-400 pt-1">{profile.namaPerusahaan}</p>
           </div>
-        </div>
-
-        <div className="mt-6 flex items-center justify-between border-t border-zinc-200 pt-2 text-[10px] text-zinc-500">
-          <span>{profile.telepon}</span>
-          <span>{profile.email}</span>
-          <span>{profile.alamat}</span>
         </div>
       </div>
     </div>
