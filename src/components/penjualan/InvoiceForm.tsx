@@ -341,6 +341,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   const [syaratPembayaran, setSyaratPembayaran] = useState("");
   const [tanggalJatuhTempo, setTanggalJatuhTempo] = useState("");
   const [potonganPersen, setPotonganPersen] = useState("");
+  const [bebasPpn, setBebasPpn] = useState(false);
   const [catatan, setCatatan] = useState("");
   const [dibayar, setDibayar] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -360,6 +361,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
       setSyaratPembayaran(invoice.syaratPembayaran ?? "");
       setTanggalJatuhTempo(toDateInputValue(invoice.jatuhTempo));
       setPotonganPersen(invoice.potonganPersen ? String(invoice.potonganPersen) : "");
+      setBebasPpn(Boolean(invoice.bebasPpn));
       setCatatan(invoice.catatan ?? "");
       setExistingDibayar(invoice.dibayar);
       setWorkingItems(
@@ -420,7 +422,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
 
   const potongan = Number(potonganPersen) || 0;
   const dpp = subtotal * (1 - potongan / 100);
-  const pajakPersenEfektif = pajakSetting.aktif ? pajakSetting.persentase : 0;
+  const pajakPersenEfektif = !bebasPpn && pajakSetting.aktif ? pajakSetting.persentase : 0;
   const pajakNominal = roundToNearest(dpp * (pajakPersenEfektif / 100), pajakSetting.pembulatan);
   const totalInvoice = dpp + pajakNominal;
 
@@ -451,6 +453,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
           keluhan: keluhan || undefined,
           kilometer: Number(kilometer) || undefined,
           potonganPersen: potongan || undefined,
+          bebasPpn,
           items,
         });
         router.push("/penjualan/faktur");
@@ -467,6 +470,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
         keluhan: keluhan || undefined,
         kilometer: Number(kilometer) || undefined,
         potonganPersen: potongan || undefined,
+        bebasPpn,
         dibayar: Number(dibayar) || 0,
         items,
       });
@@ -802,8 +806,12 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                 <Percent className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-sm font-semibold">Invoice Dikenakan Pajak</p>
-                <p className="text-xs text-green-100">Pajak {pajakSetting.persentase}% akan diterapkan pada invoice ini</p>
+                <p className="text-sm font-semibold">{bebasPpn ? "Invoice Bebas Pajak" : "Invoice Dikenakan Pajak"}</p>
+                <p className="text-xs text-green-100">
+                  {bebasPpn
+                    ? "PPN tidak diterapkan pada invoice ini (diatur di Pengaturan Tambahan)"
+                    : `Pajak ${pajakSetting.persentase}% akan diterapkan pada invoice ini`}
+                </p>
               </div>
             </div>
           )}
@@ -1040,6 +1048,19 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
                 </div>
               </label>
+
+              {pajakSetting.aktif && (
+                <label className="flex items-center gap-2 border-t border-zinc-100 pt-3 text-sm font-medium text-zinc-700">
+                  <input
+                    type="checkbox"
+                    checked={bebasPpn}
+                    onChange={(e) => setBebasPpn(e.target.checked)}
+                    className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                  />
+                  Bebas PPN untuk invoice ini
+                </label>
+              )}
+
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-zinc-700">Catatan</span>
                 <textarea
@@ -1069,7 +1090,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                 <span>{formatRupiah(dpp)}</span>
               </div>
               <div className="flex items-center justify-between text-sm text-green-50">
-                <span>Pajak ({pajakPersenEfektif}%)</span>
+                <span>{bebasPpn ? "Pajak (Bebas PPN)" : `Pajak (${pajakPersenEfektif}%)`}</span>
                 <span>{formatRupiah(pajakNominal)}</span>
               </div>
               <div className="flex items-center justify-between border-t border-white/20 pt-2 text-base font-bold">
@@ -1195,7 +1216,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
               <span>{formatRupiah(dpp)}</span>
             </div>
             <div className="flex items-center justify-between text-sm text-zinc-600">
-              <span>Pajak ({pajakPersenEfektif}%)</span>
+              <span>{bebasPpn ? "Pajak (Bebas PPN)" : `Pajak (${pajakPersenEfektif}%)`}</span>
               <span>{formatRupiah(pajakNominal)}</span>
             </div>
             <div className="flex items-center justify-between border-t border-green-100 pt-2">
