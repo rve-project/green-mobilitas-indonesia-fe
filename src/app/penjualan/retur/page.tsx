@@ -43,7 +43,7 @@ export default function ReturPenjualanPage() {
   }
 
   const sortedRetur = useMemo(
-    () => (retur ? [...retur].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()) : null),
+    () => (retur ? [...retur].sort((a, b) => a.kode.localeCompare(b.kode)) : null),
     [retur]
   );
 

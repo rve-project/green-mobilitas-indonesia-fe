@@ -15,9 +15,11 @@ import {
   Mail,
   MapPin,
   Package,
+  Pencil,
   Phone,
   Printer,
   Send,
+  Trash2,
   User,
   X,
 } from "lucide-react";
@@ -39,6 +41,7 @@ interface DetailPembelianModalProps {
   supplierList: Supplier[];
   onClose: () => void;
   onNavigate: (id: string) => void;
+  onDeleted: (id: string) => void;
 }
 
 const STATUS_CONFIG: Record<Pembelian["status"], { label: string; className: string }> = {
@@ -57,7 +60,7 @@ function formatTime(iso: string) {
   return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso)).replace(":", ".");
 }
 
-export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, onNavigate }: DetailPembelianModalProps) {
+export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, onNavigate, onDeleted }: DetailPembelianModalProps) {
   const router = useRouter();
   const [fetched, setFetched] = useState<{ id: string; pembelian: Pembelian | null; notFound: boolean }>({
     id: "",
@@ -75,6 +78,10 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
   const [bayarLunas, setBayarLunas] = useState(false);
   const [bayarSubmitting, setBayarSubmitting] = useState(false);
   const [bayarError, setBayarError] = useState<string | null>(null);
+
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function reloadPembayaranHutang() {
     api.pembayaranHutang().then(setPembayaranHutang);
@@ -153,6 +160,19 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
     router.push(`/pembelian/faktur/${pembelianId}/cetak`);
   }
 
+  async function submitDeletePembelian() {
+    if (!pembelian) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      await api.deletePembelian(pembelian.id);
+      onDeleted(pembelian.id);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Gagal menghapus pembelian");
+      setDeleteSubmitting(false);
+    }
+  }
+
   const sisaTagihan = pembelian ? Math.max(0, pembelian.total - (pembelian.returTotal ?? 0) - pembelian.dibayar) : 0;
 
   function toggleBayarLunas(checked: boolean) {
@@ -222,15 +242,70 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {pembelian && pembelian.status !== "dibatalkan" && (
+              <button
+                type="button"
+                onClick={() => router.push(`/pembelian/faktur/${pembelianId}/edit`)}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit Invoice
+              </button>
+            )}
+            {pembelian && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteConfirming(true);
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Hapus
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Tutup"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
+
+        {deleteConfirming && (
+          <div className="flex items-center justify-between gap-3 border-b border-red-100 bg-red-50 px-5 py-3">
+            <div className="text-sm text-red-700">
+              <p className="font-semibold">Hapus pembelian #{pembelian?.kode}?</p>
+              <p className="text-xs text-red-500">
+                Tindakan ini tidak bisa dibatalkan. Pembelian yang sudah punya pembayaran atau retur tidak bisa dihapus.
+              </p>
+              {deleteError && <p className="mt-1 text-xs font-medium text-red-600">{deleteError}</p>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirming(false)}
+                disabled={deleteSubmitting}
+                className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={submitDeletePembelian}
+                disabled={deleteSubmitting}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {deleteSubmitting ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-5">
           {notFound ? (

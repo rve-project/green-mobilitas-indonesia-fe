@@ -57,7 +57,7 @@ export default function PenerimaanBarangPage() {
       .filter((d) => withinLastDays(d.tanggal, periodDays))
       .filter((d) => !status || d.status === status)
       .filter((d) => !q || d.kode.toLowerCase().includes(q))
-      .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+      .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [data, search, periodDays, status]);
 
   return (

@@ -72,7 +72,9 @@ export default function PiutangPage() {
     return pelanggan
       .map((p) => {
         const semuaInvoice = (invoice ?? []).filter((inv) => inv.pelangganId === p.id && inv.status !== "dibatalkan");
-        const invoicesPiutang = semuaInvoice.filter((inv) => inv.statusPembayaran !== "lunas");
+        const invoicesPiutang = semuaInvoice
+          .filter((inv) => inv.statusPembayaran !== "lunas")
+          .sort((a, b) => a.kode.localeCompare(b.kode));
         const totalTagihan = invoicesPiutang.reduce((s, inv) => s + invoiceNet(inv), 0);
         const totalDibayar = invoicesPiutang.reduce((s, inv) => s + inv.dibayar, 0);
         return {
@@ -83,7 +85,8 @@ export default function PiutangPage() {
           terbayarPersen: totalTagihan > 0 ? (totalDibayar / totalTagihan) * 100 : 0,
         };
       })
-      .filter((row) => row.invoicesPiutang.length > 0);
+      .filter((row) => row.invoicesPiutang.length > 0)
+      .sort((a, b) => a.pelanggan.kode.localeCompare(b.pelanggan.kode));
   }, [pelanggan, invoice]);
 
   const summary = useMemo(() => {

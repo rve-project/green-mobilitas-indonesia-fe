@@ -34,11 +34,13 @@ export default function PelangganPage() {
   const filtered = useMemo(() => {
     if (!pelanggan) return null;
     const q = search.trim().toLowerCase();
-    return pelanggan.filter((p) => {
-      const matchesSearch = !q || p.kode.toLowerCase().includes(q) || p.nama.toLowerCase().includes(q);
-      const matchesStatus = !statusFilter || p.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+    return pelanggan
+      .filter((p) => {
+        const matchesSearch = !q || p.kode.toLowerCase().includes(q) || p.nama.toLowerCase().includes(q);
+        const matchesStatus = !statusFilter || p.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [pelanggan, search, statusFilter]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;

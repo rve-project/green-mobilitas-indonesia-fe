@@ -16,7 +16,7 @@ import {
   ReportResult,
 } from "@/lib/laporanCompute";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { downloadElementAsPdf } from "@/lib/pdfExport";
+import { downloadElementAsPdf, openElementAsPdf } from "@/lib/pdfExport";
 
 export default function CetakLaporanPage() {
   const searchParams = useSearchParams();
@@ -26,6 +26,7 @@ export default function CetakLaporanPage() {
   const [dataset, setDataset] = useState<LaporanDataset | null>(null);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [opening, setOpening] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,6 +61,16 @@ export default function CetakLaporanPage() {
     }
   }
 
+  async function handleOpenPdf() {
+    if (!printRef.current) return;
+    setOpening(true);
+    try {
+      await openElementAsPdf(printRef.current, "portrait");
+    } finally {
+      setOpening(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-100 print:bg-white">
       <style>{`@page { size: A4; margin: 12mm; }`}</style>
@@ -78,11 +89,12 @@ export default function CetakLaporanPage() {
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700"
+            disabled={opening}
+            onClick={handleOpenPdf}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
           >
             <Printer className="h-4 w-4" />
-            Cetak
+            {opening ? "Membuat PDF..." : "Buka & Cetak PDF"}
           </button>
         </div>
       </div>

@@ -81,7 +81,7 @@ export default function FakturPembelianPage() {
         if (!q) return true;
         return p.kode.toLowerCase().includes(q) || (supplierMap.get(p.supplierId) ?? "").toLowerCase().includes(q);
       })
-      .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+      .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [pembelian, tab, search, periodDays, supplierMap]);
 
   const summary = useMemo(() => {
@@ -241,6 +241,10 @@ export default function FakturPembelianPage() {
           supplierList={supplier}
           onClose={() => setSelectedId(null)}
           onNavigate={setSelectedId}
+          onDeleted={(id) => {
+            setPembelian((prev) => prev?.filter((p) => p.id !== id) ?? null);
+            setSelectedId(null);
+          }}
         />
       )}
     </div>

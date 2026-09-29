@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Printer } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import { api } from "@/lib/api";
 import { CompanyProfile, Pembelian, Supplier } from "@/lib/types";
 import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { downloadElementAsPdf, openElementAsPdf } from "@/lib/pdfExport";
 
 export default function CetakPembelianPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,9 @@ export default function CetakPembelianPage() {
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api
@@ -27,13 +31,30 @@ export default function CetakPembelianPage() {
     api.getCompanyProfile().then(setProfile);
   }, [id]);
 
-  const ready = Boolean(pembelian && supplier && profile);
+  // Generating the PDF ourselves (html2canvas + jsPDF) instead of calling window.print()
+  // means the file never carries the header/footer (page URL, date, page number) that
+  // Chrome's own "print this webpage" dialog stamps onto HTML pages.
+  async function handleDownloadPdf() {
+    if (!printRef.current || !pembelian) return;
+    setDownloading(true);
+    try {
+      await downloadElementAsPdf(printRef.current, `${pembelian.kode}.pdf`, "portrait");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
-  useEffect(() => {
-    if (!ready) return;
-    const t = setTimeout(() => window.print(), 350);
-    return () => clearTimeout(t);
-  }, [ready]);
+  // Opens the same PDF in a new tab (native PDF viewer) instead of saving it -- printing
+  // straight from there is just as clean as the download.
+  async function handleOpenPdf() {
+    if (!printRef.current || !pembelian) return;
+    setOpening(true);
+    try {
+      await openElementAsPdf(printRef.current, "portrait");
+    } finally {
+      setOpening(false);
+    }
+  }
 
   if (notFound) {
     return <div className="p-8 text-sm text-zinc-400">Data invoice tidak ditemukan.</div>;
@@ -59,17 +80,29 @@ export default function CetakPembelianPage() {
           items={[{ label: "Faktur Pembelian", href: "/pembelian/faktur" }, { label: "Cetak Dokumen" }]}
           className=""
         />
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700"
-        >
-          <Printer className="h-4 w-4" />
-          Cetak
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" />
+            {downloading ? "Membuat PDF..." : "Download PDF"}
+          </button>
+          <button
+            type="button"
+            disabled={opening}
+            onClick={handleOpenPdf}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
+          >
+            <Printer className="h-4 w-4" />
+            {opening ? "Membuat PDF..." : "Buka & Cetak PDF"}
+          </button>
+        </div>
       </div>
 
-      <div className="relative mx-auto w-[210mm] bg-white p-[12mm] text-[13px] shadow-lg print:w-auto print:shadow-none">
+      <div ref={printRef} className="relative mx-auto w-[210mm] bg-white p-[12mm] text-[13px] shadow-lg print:w-auto print:shadow-none">
         <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 overflow-hidden">
           <div className="h-40 w-40 -translate-y-8 translate-x-8 rotate-45 bg-green-600" />
         </div>
@@ -77,10 +110,15 @@ export default function CetakPembelianPage() {
         <div className="relative flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-gmi-green.png" alt="Logo" className="h-11 w-11 object-contain" />
+            <img src="/logo-gmi-green.png" alt="Logo" className="h-20 w-20 object-contain" />
             <div>
               <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
               <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                {profile.telepon}
+                {profile.telepon && profile.email ? " · " : ""}
+                {profile.email}
+              </p>
             </div>
           </div>
         </div>
@@ -92,6 +130,7 @@ export default function CetakPembelianPage() {
             <Row label="Supplier" value={supplier.nama} bold />
             <Row label="Alamat" value={supplier.alamat} />
             <Row label="Telepon" value={supplier.telepon || "-"} />
+            {supplier.email && <Row label="Email" value={supplier.email} />}
           </div>
           <div className="rounded-lg border border-zinc-300 p-2.5 text-xs">
             <p className="text-sm font-bold text-zinc-900">INVOICE PEMBELIAN: {pembelian.kode}</p>
@@ -169,20 +208,14 @@ export default function CetakPembelianPage() {
         </div>
 
         <div className="mt-14 flex justify-between text-center text-xs">
-          <div>
+          <div className="w-56">
             <p className="mb-20">Supplier</p>
-            <p className="border-t border-zinc-400 pt-1">{supplier.nama}</p>
+            <p className="truncate border-t border-zinc-400 pt-1">{supplier.nama}</p>
           </div>
-          <div>
+          <div className="w-56">
             <p className="mb-20"></p>
-            <p className="border-t border-zinc-400 pt-1">{profile.namaPerusahaan}</p>
+            <p className="truncate border-t border-zinc-400 pt-1">{profile.namaPerusahaan}</p>
           </div>
-        </div>
-
-        <div className="mt-6 flex items-center justify-between border-t border-zinc-200 pt-2 text-[10px] text-zinc-500">
-          <span>{profile.telepon}</span>
-          <span>{profile.email}</span>
-          <span>{profile.alamat}</span>
         </div>
       </div>
     </div>

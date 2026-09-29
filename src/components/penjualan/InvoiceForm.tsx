@@ -395,11 +395,12 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Selecting a pelanggan auto-selects all of their registered vehicles; the user can then
-  // deselect individual ones in the multi-pick panel.
+  // Starts with no vehicle checked -- auto-checking every one of the customer's vehicles
+  // used to be the default, but for customers with a large fleet that meant unchecking
+  // dozens of plates by hand for every invoice that only covers one or two of them.
   function selectPelanggan(id: string) {
     setPelangganId(id);
-    setKendaraanIds(id ? kendaraanList.filter((k) => k.pelangganId === id).map((k) => k.id) : []);
+    setKendaraanIds([]);
   }
 
   function toggleKendaraan(id: string) {

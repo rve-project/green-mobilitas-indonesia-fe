@@ -53,7 +53,7 @@ export default function SupplierDetailPage() {
     () =>
       pembelian
         .filter((p) => p.supplierId === id)
-        .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()),
+        .sort((a, b) => a.kode.localeCompare(b.kode)),
     [pembelian, id]
   );
 

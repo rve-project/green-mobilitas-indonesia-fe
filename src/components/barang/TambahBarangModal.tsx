@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
-import { Barang, SATUAN_OPTIONS, Satuan, Supplier } from "@/lib/types";
+import { Barang, Lokasi, SATUAN_OPTIONS, Satuan, Supplier } from "@/lib/types";
 import { LookupSearchSelectField } from "@/components/ui/LookupSearchSelectField";
 import { RupiahInput } from "@/components/ui/RupiahInput";
 import { Select } from "@/components/ui/Select";
@@ -29,6 +29,7 @@ interface UnitConfig {
 
 interface StokConfig {
   jumlah: string;
+  lokasi: string;
   stokMinimum: string;
   stokMaksimum: string;
 }
@@ -43,6 +44,7 @@ const emptyUnitConfig = (): UnitConfig => ({
 
 const emptyStokConfig = (): StokConfig => ({
   jumlah: "",
+  lokasi: "",
   stokMinimum: "",
   stokMaksimum: "",
 });
@@ -84,6 +86,15 @@ export function TambahBarangModal({ item, supplierList, onClose, onCreated }: Ta
     item ? Object.fromEntries(item.units.map((u) => [u.satuan, unitConfigFrom(u)])) : {}
   );
   const [stokConfigs, setStokConfigs] = useState<Record<string, StokConfig>>({});
+
+  const [lokasiList, setLokasiList] = useState<Lokasi[]>([]);
+  useEffect(() => {
+    api.lokasi().then(setLokasiList);
+  }, []);
+  const lokasiOptions = useMemo(
+    () => lokasiList.filter((l) => l.status === "aktif").map((l) => ({ value: l.nama, label: l.nama })),
+    [lokasiList]
+  );
 
   const isLastStep = step === STEPS.length - 1;
 
@@ -128,6 +139,17 @@ export function TambahBarangModal({ item, supplierList, onClose, onCreated }: Ta
       return;
     }
 
+    if (!isEdit) {
+      const missingLokasi = selectedUnits.some((unit) => {
+        const cfg = stokConfigs[unit] ?? emptyStokConfig();
+        return Number(cfg.jumlah) > 0 && !cfg.lokasi;
+      });
+      if (missingLokasi) {
+        setError("Pilih lokasi untuk setiap unit yang diisi stok awalnya");
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -161,16 +183,20 @@ export function TambahBarangModal({ item, supplierList, onClose, onCreated }: Ta
         : await api.createBarang({
             ...basePayload,
             aktif: true,
-            stokLokasi: selectedUnits.map((unit) => {
-              const cfg = stokConfigs[unit] ?? emptyStokConfig();
-              return {
-                satuan: unit,
-                lokasi: "Toko",
-                jumlah: Number(cfg.jumlah) || 0,
-                stokMinimum: cfg.stokMinimum ? Number(cfg.stokMinimum) : undefined,
-                stokMaksimum: cfg.stokMaksimum ? Number(cfg.stokMaksimum) : undefined,
-              };
-            }),
+            stokLokasi: selectedUnits
+              .map((unit) => {
+                const cfg = stokConfigs[unit] ?? emptyStokConfig();
+                const jumlah = Number(cfg.jumlah) || 0;
+                if (jumlah <= 0 || !cfg.lokasi) return null;
+                return {
+                  satuan: unit,
+                  lokasi: cfg.lokasi,
+                  jumlah,
+                  stokMinimum: cfg.stokMinimum ? Number(cfg.stokMinimum) : undefined,
+                  stokMaksimum: cfg.stokMaksimum ? Number(cfg.stokMaksimum) : undefined,
+                };
+              })
+              .filter((entry): entry is NonNullable<typeof entry> => entry !== null),
           });
       onCreated(saved);
       onClose();
@@ -451,7 +477,7 @@ export function TambahBarangModal({ item, supplierList, onClose, onCreated }: Ta
                       return (
                         <div key={unit} className="rounded-lg border border-zinc-200 bg-white p-4">
                           <p className="mb-3 text-sm font-semibold text-zinc-900">{unit}</p>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <Field label="Jumlah Stok">
                               <input
                                 type="number"
@@ -462,6 +488,17 @@ export function TambahBarangModal({ item, supplierList, onClose, onCreated }: Ta
                                 className={inputClass}
                               />
                             </Field>
+                            <Field label="Lokasi">
+                              <Select
+                                value={cfg.lokasi}
+                                onChange={(v) => updateStokConfig(unit, { lokasi: v })}
+                                disabled={lokasiOptions.length === 0}
+                                placeholder={lokasiOptions.length === 0 ? "Tidak ada lokasi" : "Pilih lokasi..."}
+                                options={lokasiOptions}
+                              />
+                            </Field>
+                          </div>
+                          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <Field label="Stok Minimum">
                               <input
                                 type="number"

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ClipboardList, Save, Search } from "lucide-react";
+import { ClipboardList, Plus, Save, Search, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Barang, Lokasi } from "@/lib/types";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
@@ -53,6 +53,12 @@ export default function StokOpnameBaruPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Lets you add a barang that has never been recorded at this lokasi before -- selectLokasi
+  // only seeds rows from existing stokLokasi entries, so without this there's no way to
+  // start tracking a brand-new item/location combination through Stok Opname.
+  const [addItemPicker, setAddItemPicker] = useState(false);
+  const [addItemId, setAddItemId] = useState("");
+
   function selectLokasi(value: string) {
     setLokasi(value);
     const nextRows: OpnameRow[] = [];
@@ -79,6 +85,31 @@ export default function StokOpnameBaruPage() {
       prev.map((r) => (r.itemId === itemId && r.satuan === satuan ? { ...r, stokFisik: value } : r))
     );
   }
+
+  function addRow(itemId: string) {
+    const barang = allBarang.find((b) => b.id === itemId);
+    if (!barang) return;
+    setRows((prev) =>
+      [
+        ...prev,
+        { itemId: barang.id, kode: barang.kode, nama: barang.nama, satuan: barang.satuan, stokSistem: 0, stokFisik: "0" },
+      ].sort((a, b) => a.nama.localeCompare(b.nama))
+    );
+    setAddItemId("");
+    setAddItemPicker(false);
+  }
+
+  function removeRow(itemId: string, satuan: string) {
+    setRows((prev) => prev.filter((r) => !(r.itemId === itemId && r.satuan === satuan)));
+  }
+
+  const addableBarangOptions = useMemo(
+    () =>
+      allBarang
+        .filter((b) => !rows.some((r) => r.itemId === b.id))
+        .map((b) => ({ value: b.id, label: `${b.kode} — ${b.nama}` })),
+    [allBarang, rows]
+  );
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -151,16 +182,50 @@ export default function StokOpnameBaruPage() {
               <p className="flex items-center gap-2 text-sm font-semibold">
                 <ClipboardList className="h-4 w-4" /> Hitung Fisik — {lokasi} ({totalDiperiksa} item)
               </p>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-200" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari nama atau kode..."
-                  className="w-56 rounded-lg bg-white/15 py-1.5 pl-9 pr-3 text-sm text-white placeholder:text-green-100 focus:outline-none"
-                />
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-200" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Cari nama atau kode..."
+                    className="w-56 rounded-lg bg-white/15 py-1.5 pl-9 pr-3 text-sm text-white placeholder:text-green-100 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAddItemPicker((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium hover:bg-white/25"
+                >
+                  <Plus className="h-4 w-4" /> Tambah Item
+                </button>
               </div>
             </div>
+
+            {addItemPicker && (
+              <div className="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50 px-4 py-3">
+                <div className="w-72">
+                  <Select
+                    value={addItemId}
+                    onChange={setAddItemId}
+                    placeholder="Cari barang yang belum tercatat di lokasi ini..."
+                    options={addableBarangOptions}
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={!addItemId}
+                  onClick={() => addRow(addItemId)}
+                  className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Tambahkan
+                </button>
+                <p className="text-xs text-zinc-400">
+                  Untuk barang yang belum pernah tercatat di lokasi ini (mis. dari pembelian lama sebelum lokasi dilacak per item).
+                </p>
+              </div>
+            )}
+
             <div className="overflow-x-auto bg-white">
               <table className="w-full text-left text-sm">
                 <thead>
@@ -171,12 +236,13 @@ export default function StokOpnameBaruPage() {
                     <th className="px-4 py-2 text-right font-medium">Stok Sistem</th>
                     <th className="px-4 py-2 text-right font-medium">Stok Fisik</th>
                     <th className="px-4 py-2 text-right font-medium">Selisih</th>
+                    <th className="px-4 py-2" />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-sm text-zinc-400">
+                      <td colSpan={7} className="py-6 text-center text-sm text-zinc-400">
                         Tidak ada barang ditemukan
                       </td>
                     </tr>
@@ -208,6 +274,16 @@ export default function StokOpnameBaruPage() {
                             >
                               {selisih > 0 ? `+${selisih}` : selisih}
                             </span>
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => removeRow(r.itemId, r.satuan)}
+                              aria-label={`Hapus ${r.nama} dari sesi ini`}
+                              className="text-zinc-400 hover:text-red-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
                           </td>
                         </tr>
                       );

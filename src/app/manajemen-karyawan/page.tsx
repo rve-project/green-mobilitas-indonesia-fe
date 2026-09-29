@@ -147,16 +147,18 @@ function KaryawanTab({ karyawan, posisi }: { karyawan: Karyawan[] | null; posisi
   const filtered = useMemo(() => {
     if (!karyawan) return null;
     const q = search.trim().toLowerCase();
-    return karyawan.filter((k) => {
-      const matchesSearch =
-        !q ||
-        k.kode.toLowerCase().includes(q) ||
-        k.nama.toLowerCase().includes(q) ||
-        (k.email ?? "").toLowerCase().includes(q) ||
-        (k.telepon ?? "").toLowerCase().includes(q);
-      const matchesPosisi = !posisiFilter || k.posisiId === posisiFilter;
-      return matchesSearch && matchesPosisi;
-    });
+    return karyawan
+      .filter((k) => {
+        const matchesSearch =
+          !q ||
+          k.kode.toLowerCase().includes(q) ||
+          k.nama.toLowerCase().includes(q) ||
+          (k.email ?? "").toLowerCase().includes(q) ||
+          (k.telepon ?? "").toLowerCase().includes(q);
+        const matchesPosisi = !posisiFilter || k.posisiId === posisiFilter;
+        return matchesSearch && matchesPosisi;
+      })
+      .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [karyawan, search, posisiFilter]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;
@@ -372,8 +374,8 @@ function PosisiTab({ posisi, onChanged }: { posisi: Posisi[] | null; onChanged: 
   const filtered = useMemo(() => {
     if (!posisi) return null;
     const q = search.trim().toLowerCase();
-    if (!q) return posisi;
-    return posisi.filter((p) => p.nama.toLowerCase().includes(q) || p.kode.toLowerCase().includes(q));
+    const rows = q ? posisi.filter((p) => p.nama.toLowerCase().includes(q) || p.kode.toLowerCase().includes(q)) : posisi;
+    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
   }, [posisi, search]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;

@@ -8,7 +8,7 @@ import { CompanyProfile, Invoice, Jasa, Pelanggan } from "@/lib/types";
 import { formatDate, formatRupiah, hitungTotalSetelahDiskon } from "@/lib/format";
 import { periodRangeFromSearchParams } from "@/lib/laporanCompute";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { downloadElementAsPdf } from "@/lib/pdfExport";
+import { downloadElementAsPdf, openElementAsPdf } from "@/lib/pdfExport";
 
 export default function CetakLaporanPenjualanPage() {
   const searchParams = useSearchParams();
@@ -17,6 +17,7 @@ export default function CetakLaporanPenjualanPage() {
   const [jasaList, setJasaList] = useState<Jasa[]>([]);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [opening, setOpening] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +42,16 @@ export default function CetakLaporanPenjualanPage() {
       await downloadElementAsPdf(printRef.current, `laporan-penjualan-${Date.now()}.pdf`, "landscape");
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleOpenPdf() {
+    if (!printRef.current) return;
+    setOpening(true);
+    try {
+      await openElementAsPdf(printRef.current, "landscape");
+    } finally {
+      setOpening(false);
     }
   }
 
@@ -74,11 +85,12 @@ export default function CetakLaporanPenjualanPage() {
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700"
+            disabled={opening}
+            onClick={handleOpenPdf}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
           >
             <Printer className="h-4 w-4" />
-            Cetak
+            {opening ? "Membuat PDF..." : "Buka & Cetak PDF"}
           </button>
         </div>
       </div>

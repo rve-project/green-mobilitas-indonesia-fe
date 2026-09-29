@@ -72,7 +72,9 @@ export default function HutangPage() {
     return supplier
       .map((s) => {
         const semuaPembelian = (pembelian ?? []).filter((p) => p.supplierId === s.id && p.status !== "dibatalkan");
-        const pembelianHutang = semuaPembelian.filter((p) => p.statusPembayaran !== "lunas");
+        const pembelianHutang = semuaPembelian
+          .filter((p) => p.statusPembayaran !== "lunas")
+          .sort((a, b) => a.kode.localeCompare(b.kode));
         const totalTagihan = pembelianHutang.reduce((sum, p) => sum + pembelianNet(p), 0);
         const totalDibayar = pembelianHutang.reduce((sum, p) => sum + p.dibayar, 0);
         return {
@@ -83,7 +85,8 @@ export default function HutangPage() {
           terbayarPersen: totalTagihan > 0 ? (totalDibayar / totalTagihan) * 100 : 0,
         };
       })
-      .filter((row) => row.pembelianHutang.length > 0);
+      .filter((row) => row.pembelianHutang.length > 0)
+      .sort((a, b) => a.supplier.kode.localeCompare(b.supplier.kode));
   }, [supplier, pembelian]);
 
   const summary = useMemo(() => {

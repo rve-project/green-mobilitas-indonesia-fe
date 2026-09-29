@@ -86,22 +86,22 @@ export default function BarangJasaPage() {
   const filteredBarang = useMemo(() => {
     if (!barang) return null;
     const q = search.trim().toLowerCase();
-    if (!q) return barang;
-    return barang.filter((b) => b.kode.toLowerCase().includes(q) || b.nama.toLowerCase().includes(q));
+    const rows = q ? barang.filter((b) => b.kode.toLowerCase().includes(q) || b.nama.toLowerCase().includes(q)) : barang;
+    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
   }, [barang, search]);
 
   const filteredJasa = useMemo(() => {
     if (!jasa) return null;
     const q = search.trim().toLowerCase();
-    if (!q) return jasa;
-    return jasa.filter((j) => j.kode.toLowerCase().includes(q) || j.nama.toLowerCase().includes(q));
+    const rows = q ? jasa.filter((j) => j.kode.toLowerCase().includes(q) || j.nama.toLowerCase().includes(q)) : jasa;
+    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
   }, [jasa, search]);
 
   const filteredPaket = useMemo(() => {
     if (!paket) return null;
     const q = search.trim().toLowerCase();
-    if (!q) return paket;
-    return paket.filter((p) => p.kode.toLowerCase().includes(q) || p.nama.toLowerCase().includes(q));
+    const rows = q ? paket.filter((p) => p.kode.toLowerCase().includes(q) || p.nama.toLowerCase().includes(q)) : paket;
+    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
   }, [paket, search]);
 
   return (

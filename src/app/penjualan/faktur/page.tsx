@@ -88,7 +88,7 @@ export default function FakturPenjualanPage() {
           kendaraanInv.some((k) => k.platNomor.toLowerCase().includes(q))
         );
       })
-      .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+      .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [invoice, tab, search, periodDays, kendaraan, pelangganMap]);
 
   const summary = useMemo(() => {

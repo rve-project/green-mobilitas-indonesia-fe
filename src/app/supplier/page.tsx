@@ -34,11 +34,13 @@ export default function SupplierPage() {
   const filtered = useMemo(() => {
     if (!supplier) return null;
     const q = search.trim().toLowerCase();
-    return supplier.filter((s) => {
-      const matchesSearch = !q || s.kode.toLowerCase().includes(q) || s.nama.toLowerCase().includes(q);
-      const matchesStatus = !statusFilter || s.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+    return supplier
+      .filter((s) => {
+        const matchesSearch = !q || s.kode.toLowerCase().includes(q) || s.nama.toLowerCase().includes(q);
+        const matchesStatus = !statusFilter || s.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [supplier, search, statusFilter]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;

@@ -8,7 +8,7 @@ import { CompanyProfile, Invoice, Kendaraan, Pelanggan } from "@/lib/types";
 import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { downloadElementAsPdf } from "@/lib/pdfExport";
+import { downloadElementAsPdf, openElementAsPdf } from "@/lib/pdfExport";
 
 type Jenis = "invoice" | "proforma" | "kwitansi";
 type Format = "a4" | "dot";
@@ -37,6 +37,7 @@ export default function CetakInvoicePage() {
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [opening, setOpening] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,13 +52,32 @@ export default function CetakInvoicePage() {
     api.getCompanyProfile().then(setProfile);
   }, [id]);
 
-  const ready = Boolean(invoice && pelanggan && profile);
+  // Generating the PDF ourselves (html2canvas + jsPDF) instead of calling window.print()
+  // means the file never carries the header/footer (page URL, date, page number) that
+  // Chrome's own "print this webpage" dialog stamps onto HTML pages -- no page-level CSS
+  // can suppress that, since it isn't part of the page at all.
+  async function handleDownloadPdf() {
+    if (!printRef.current || !invoice) return;
+    setDownloading(true);
+    try {
+      await downloadElementAsPdf(printRef.current, `${nomorDokumen(invoice, jenis)}.pdf`, "portrait");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
-  useEffect(() => {
-    if (!ready) return;
-    const t = setTimeout(() => window.print(), 350);
-    return () => clearTimeout(t);
-  }, [ready]);
+  // Opens the same PDF in a new tab (native PDF viewer) instead of saving it -- printing
+  // straight from there is just as clean as the download, but doesn't require digging the
+  // file out of Downloads afterward.
+  async function handleOpenPdf() {
+    if (!printRef.current || !invoice) return;
+    setOpening(true);
+    try {
+      await openElementAsPdf(printRef.current, "portrait");
+    } finally {
+      setOpening(false);
+    }
+  }
 
   if (notFound) {
     return <div className="p-8 text-sm text-zinc-400">Data invoice tidak ditemukan.</div>;
@@ -72,16 +92,6 @@ export default function CetakInvoicePage() {
   const diskonNominal = subtotal - dpp;
   const pajakNominal = invoice.pajak ?? 0;
   const nomor = nomorDokumen(invoice, jenis);
-
-  async function handleDownloadPdf() {
-    if (!printRef.current) return;
-    setDownloading(true);
-    try {
-      await downloadElementAsPdf(printRef.current, `${nomor}.pdf`, "portrait");
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   return (
     <div className="min-h-screen bg-zinc-100 print:bg-white">
@@ -107,11 +117,12 @@ export default function CetakInvoicePage() {
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700"
+            disabled={opening}
+            onClick={handleOpenPdf}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
           >
             <Printer className="h-4 w-4" />
-            Cetak
+            {opening ? "Membuat PDF..." : "Buka & Cetak PDF"}
           </button>
         </div>
       </div>
@@ -184,7 +195,7 @@ function A4Document({
       <div className="relative flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-green.png" alt="Logo" className="h-16 w-16 object-contain" />
+          <img src="/logo-gmi-green.png" alt="Logo" className="h-20 w-20 object-contain" />
           <div>
             <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
             <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
@@ -205,11 +216,15 @@ function A4Document({
             <>
               <Row label="Diterima Dari" value={pelanggan.nama} bold />
               <Row label="Alamat" value={pelanggan.alamat} />
+              {pelanggan.telepon && <Row label="Telepon" value={pelanggan.telepon} />}
+              {pelanggan.email && <Row label="Email" value={pelanggan.email} />}
             </>
           ) : (
             <>
               <Row label="Cust." value={pelanggan.nama} bold />
               <Row label="Alamat" value={pelanggan.alamat} />
+              {pelanggan.telepon && <Row label="Telepon" value={pelanggan.telepon} />}
+              {pelanggan.email && <Row label="Email" value={pelanggan.email} />}
               {kendaraanUtama && (
                 <>
                   <Row label="NoPol." value={kendaraanUtama.platNomor} />
@@ -313,14 +328,14 @@ function A4Document({
         </>
       )}
 
-      <div className="mt-14 flex justify-between text-center text-xs">
+      <div className="mt-14 grid grid-cols-2 items-end text-center text-xs">
         <div>
           <p className="mb-20">{jenis === "kwitansi" ? "Pengirim" : "Pelanggan"}</p>
-          <p className="border-t border-zinc-400 pt-1">{pelanggan.nama}</p>
+          <p className="mx-auto w-48 truncate border-t border-zinc-400 pt-1">{pelanggan.nama}</p>
         </div>
         <div>
-          <p className="mb-20">{jenis === "kwitansi" ? "Penerima" : ""}</p>
-          <p className="border-t border-zinc-400 pt-1">{profile.namaPerusahaan}</p>
+          <p className="mb-20">{jenis === "kwitansi" ? "Penerima" : " "}</p>
+          <p className="mx-auto w-48 truncate border-t border-zinc-400 pt-1">{profile.namaPerusahaan}</p>
         </div>
       </div>
     </div>
@@ -403,6 +418,7 @@ function DotMatrixDocument({
         <div className="border border-black p-2">
           <p className="font-bold">{jenis === "kwitansi" ? "DITERIMA DARI" : "PELANGGAN"}</p>
           <p>{pelanggan.nama}</p>
+          {pelanggan.telepon && <p>Telp: {pelanggan.telepon}</p>}
           {pelanggan.email && <p>Email: {pelanggan.email}</p>}
           <p>{pelanggan.alamat}</p>
         </div>

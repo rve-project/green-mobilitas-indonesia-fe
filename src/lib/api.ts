@@ -401,8 +401,34 @@ export const api = {
     }[];
   }) => post<Pembelian>("/pembelian", data),
   getPembelian: (id: string) => get<Pembelian>(`/pembelian/${id}`),
-  updatePembelian: (id: string, data: Partial<Pick<Pembelian, "status" | "dibayar">>) =>
-    put<Pembelian>(`/pembelian/${id}`, data),
+  updatePembelian: (
+    id: string,
+    data: Partial<Pick<Pembelian, "status" | "dibayar">> & {
+      supplierId?: string;
+      tanggal?: string;
+      jatuhTempo?: string;
+      syaratPembayaran?: string;
+      noInvoiceSupplier?: string;
+      catatan?: string;
+      potonganPersen?: number;
+      biayaPengiriman?: number;
+      biayaLainnya?: number;
+      bebasPpn?: boolean;
+      metodePembayaran?: string;
+      catatanPembayaran?: string;
+      items?: {
+        itemId: string;
+        qty: number;
+        diskonTipe?: DiskonTipe;
+        diskonPersen: number;
+        diskonRp?: number;
+        hargaSatuan?: number;
+        lokasi?: string;
+        satuan?: string;
+      }[];
+    }
+  ) => put<Pembelian>(`/pembelian/${id}`, data),
+  deletePembelian: (id: string) => del<void>(`/pembelian/${id}`),
   createReturPembelian: (data: {
     pembelianId: string;
     tanggal?: string;

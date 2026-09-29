@@ -52,7 +52,7 @@ export default function StokOpnamePage() {
         if (!q) return true;
         return s.kode.toLowerCase().includes(q) || s.lokasi.toLowerCase().includes(q);
       })
-      .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+      .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [stokOpname, search, periodDays]);
 
   const summary = useMemo(() => {
