@@ -282,7 +282,7 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
             <div className="text-sm text-red-700">
               <p className="font-semibold">Hapus pembelian #{pembelian?.kode}?</p>
               <p className="text-xs text-red-500">
-                Tindakan ini tidak bisa dibatalkan. Pembelian yang sudah punya pembayaran atau retur tidak bisa dihapus.
+                Tindakan ini tidak bisa dibatalkan. Pembayaran yang sudah tercatat tidak ikut terhapus. Pembelian yang punya retur tidak bisa dihapus.
               </p>
               {deleteError && <p className="mt-1 text-xs font-medium text-red-600">{deleteError}</p>}
             </div>
