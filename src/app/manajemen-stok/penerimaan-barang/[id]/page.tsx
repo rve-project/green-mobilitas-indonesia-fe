@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Calendar, CheckCircle2, Package, User } from "lucide-react";
+import { Calendar, CheckCircle2, Package, Trash2, User } from "lucide-react";
 import { api } from "@/lib/api";
 import { PenerimaanBarang } from "@/lib/types";
 import { formatDateFull, formatRupiah } from "@/lib/format";
@@ -23,9 +23,13 @@ function StatusBadge({ status }: { status: PenerimaanBarang["status"] }) {
 
 export default function PenerimaanBarangDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [item, setItem] = useState<PenerimaanBarang | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -41,6 +45,18 @@ export default function PenerimaanBarangDetailPage() {
       setItem(updated);
     } finally {
       setPosting(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      await api.deletePenerimaanBarang(id);
+      router.push("/manajemen-stok/penerimaan-barang");
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Gagal menghapus penerimaan barang");
+      setDeleteSubmitting(false);
     }
   }
 
@@ -75,18 +91,63 @@ export default function PenerimaanBarangDetailPage() {
           <h1 className="text-2xl font-bold text-zinc-900">Good Receipt #{item.kode}</h1>
           <p className="text-sm text-zinc-500">Lihat detail penerimaan barang</p>
         </div>
-        {item.status === "draft" && (
+        <div className="flex items-center gap-2">
+          {item.status === "draft" && (
+            <button
+              type="button"
+              disabled={posting}
+              onClick={handlePost}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700 disabled:opacity-60"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {posting ? "Memposting..." : "Posting Sekarang"}
+            </button>
+          )}
           <button
             type="button"
-            disabled={posting}
-            onClick={handlePost}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700 disabled:opacity-60"
+            onClick={() => {
+              setDeleteError(null);
+              setDeleteConfirming(true);
+            }}
+            className="flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
           >
-            <CheckCircle2 className="h-4 w-4" />
-            {posting ? "Memposting..." : "Posting Sekarang"}
+            <Trash2 className="h-3.5 w-3.5" />
+            Hapus
           </button>
-        )}
+        </div>
       </div>
+
+      {deleteConfirming && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-3">
+          <div className="text-sm text-red-700">
+            <p className="font-semibold">Hapus penerimaan barang #{item.kode}?</p>
+            <p className="text-xs text-red-500">
+              {item.status === "terposting"
+                ? "Stok yang sudah ditambahkan lewat penerimaan ini akan dikurangi lagi (di lokasi masing-masing)."
+                : "Data ini masih draft, belum pernah menambah stok."}
+            </p>
+            {deleteError && <p className="mt-1 text-xs font-medium text-red-600">{deleteError}</p>}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteConfirming(false)}
+              disabled={deleteSubmitting}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteSubmitting}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              {deleteSubmitting ? "Menghapus..." : "Ya, Hapus"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">

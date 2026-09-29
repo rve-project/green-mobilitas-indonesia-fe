@@ -450,6 +450,7 @@ export const api = {
   }) => post<PenerimaanBarang>("/penerimaan-barang", data),
   updatePenerimaanBarang: (id: string, data: { status: PenerimaanBarang["status"] }) =>
     put<PenerimaanBarang>(`/penerimaan-barang/${id}`, data),
+  deletePenerimaanBarang: (id: string) => del<void>(`/penerimaan-barang/${id}`),
   createPengeluaranBarang: (data: {
     tanggal?: string;
     alasan: string;
