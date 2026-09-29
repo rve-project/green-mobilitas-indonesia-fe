@@ -89,10 +89,15 @@ export default function StokOpnameBaruPage() {
   function addRow(itemId: string) {
     const barang = allBarang.find((b) => b.id === itemId);
     if (!barang) return;
+    // A barang with no stokLokasi entries anywhere has never been through location
+    // tracking -- its flat stok is a real un-attributed balance, so treat that as the
+    // starting "Stok Sistem" here (matches the backend's reconciliation in
+    // stokOpname.controller.ts) instead of implying there's currently nothing at all.
+    const stokSistem = barang.stokLokasi.length === 0 ? barang.stok : 0;
     setRows((prev) =>
       [
         ...prev,
-        { itemId: barang.id, kode: barang.kode, nama: barang.nama, satuan: barang.satuan, stokSistem: 0, stokFisik: "0" },
+        { itemId: barang.id, kode: barang.kode, nama: barang.nama, satuan: barang.satuan, stokSistem, stokFisik: String(stokSistem) },
       ].sort((a, b) => a.nama.localeCompare(b.nama))
     );
     setAddItemId("");
