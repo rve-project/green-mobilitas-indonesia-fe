@@ -51,7 +51,9 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
 /**
  * Modules a user can actually reach: the role's default set, optionally narrowed by a
  * per-user `allowedModules` restriction (an admin can only take away access their role
- * would otherwise grant — never add access beyond the role ceiling).
+ * would otherwise grant — never add access beyond the role ceiling). "dashboard" is a
+ * normal, togglable entry here like any other -- see AppShell for how a user without it
+ * gets routed to whichever module they *do* have instead of being stuck on "/".
  */
 export function effectiveModules(role: UserRole, allowedModules?: string[] | null): ModuleKey[] {
   const roleModules = MODULE_KEYS.filter((m) => MODULE_ROLES[m].includes(role));

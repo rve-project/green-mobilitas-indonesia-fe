@@ -7,7 +7,7 @@ import { USER_ROLE_LABELS, USER_ROLE_OPTIONS, User, UserRole } from "@/lib/types
 import { MODULE_KEYS, MODULE_LABELS, MODULE_ROLES } from "@/lib/permissions";
 import { Select } from "@/components/ui/Select";
 
-const SELECTABLE_MODULES = MODULE_KEYS.filter((m) => m !== "dashboard");
+const SELECTABLE_MODULES = MODULE_KEYS;
 
 interface TambahUserModalProps {
   user?: User;
