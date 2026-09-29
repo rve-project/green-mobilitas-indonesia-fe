@@ -150,7 +150,7 @@ function A4Document({
       <div className="relative flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-green.png" alt="Logo" className="h-14 w-14 object-contain" />
+          <img src="/logo-gmi-green.png" alt="Logo" className="h-24 w-24 object-contain" />
           <div>
             <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
             <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
