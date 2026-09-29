@@ -146,12 +146,15 @@ export function computeReport(
           { label: "Total Dibayar", value: formatRupiah(totalDibayar) },
           { label: "Outstanding", value: formatRupiah(Math.max(0, totalOmzet - totalDibayar)) },
         ],
-        columns: ["Kode", "Tanggal", "Supplier", "Total Qty", "Total", "Dibayar", "Status"],
+        columns: ["Kode", "Tanggal", "Supplier", "Total Qty", "Stok Sekarang", "Total", "Dibayar", "Status"],
         rows: rows.map((p) => [
           p.kode,
           formatDate(p.tanggal),
           d.supplierMap.get(p.supplierId) ?? "-",
           String(p.items.reduce((si, it) => si + it.qty, 0)),
+          p.items
+            .map((it) => `${it.nama}: ${d.barangMap.get(it.itemId)?.stok ?? "-"}`)
+            .join("; "),
           formatRupiah(p.total),
           formatRupiah(p.dibayar),
           humanize(p.statusPembayaran),
