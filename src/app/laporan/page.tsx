@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { Download, FileText, Printer, RefreshCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { Category, fetchLaporanDataset, computeReport, LaporanDataset, REPORTS, ReportKey, ReportResult } from "@/lib/laporanCompute";
+import { Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { DateInput } from "@/components/ui/DateInput";
@@ -47,6 +48,17 @@ export default function LaporanPage() {
   const [tanggalSelesai, setTanggalSelesai] = useState(() => now.toISOString().slice(0, 10));
   const [result, setResult] = useState<ReportResult | null>(null);
 
+  // Filters specific to the "Stok per Lokasi" report -- it's not period-based, it filters
+  // by warehouse location instead (see the periodBased flag on its ReportDef).
+  const [stokLokasi, setStokLokasi] = useState("");
+  const [stokSubLokasi, setStokSubLokasi] = useState("");
+  const [stokCariItem, setStokCariItem] = useState("");
+
+  const lokasiOptions = useMemo(
+    () => (dataset?.lokasiList ?? []).filter((l) => l.status === "aktif").map((l) => ({ value: l.nama, label: l.nama })),
+    [dataset]
+  );
+
   const tahunOptions = useMemo(() => {
     const currentYear = now.getFullYear();
     const years = new Set<number>([currentYear]);
@@ -85,6 +97,9 @@ export default function LaporanPage() {
     setTahun(String(now.getFullYear()));
     setTanggalMulai(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10));
     setTanggalSelesai(now.toISOString().slice(0, 10));
+    setStokLokasi("");
+    setStokSubLokasi("");
+    setStokCariItem("");
     setResult(null);
     setExportError(null);
   }
@@ -102,7 +117,17 @@ export default function LaporanPage() {
 
   function generate() {
     if (!dataset) return;
-    setResult(computeReport(selectedReport, periodRange(), dataset));
+    if (selectedReport === "stok-per-lokasi") {
+      setResult(
+        computeReport(selectedReport, periodRange(), dataset, {
+          lokasi: stokLokasi || undefined,
+          subLokasi: stokSubLokasi || undefined,
+          cariItem: stokCariItem || undefined,
+        })
+      );
+    } else {
+      setResult(computeReport(selectedReport, periodRange(), dataset));
+    }
     setExportError(null);
   }
 
@@ -114,6 +139,11 @@ export default function LaporanPage() {
     } else {
       params.set("mulai", tanggalMulai);
       params.set("selesai", tanggalSelesai);
+    }
+    if (selectedReport === "stok-per-lokasi") {
+      if (stokLokasi) params.set("lokasi", stokLokasi);
+      if (stokSubLokasi) params.set("subLokasi", stokSubLokasi);
+      if (stokCariItem) params.set("cariItem", stokCariItem);
     }
     return params;
   }
@@ -263,6 +293,41 @@ export default function LaporanPage() {
           </>
         )}
 
+        {selectedReport === "stok-per-lokasi" && (
+          <div className="mt-5 grid grid-cols-1 gap-3 border-t border-zinc-100 pt-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-zinc-700">Lokasi</span>
+              <Select
+                value={stokLokasi}
+                onChange={setStokLokasi}
+                options={lokasiOptions}
+                placeholder="Semua Lokasi"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-zinc-700">Sub Lokasi (Opsional)</span>
+              <input
+                value={stokSubLokasi}
+                onChange={(e) => setStokSubLokasi(e.target.value)}
+                placeholder="Cari..."
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-zinc-700">Cari Item</span>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                <input
+                  value={stokCariItem}
+                  onChange={(e) => setStokCariItem(e.target.value)}
+                  placeholder="Kode atau nama item..."
+                  className="w-full rounded-lg border border-zinc-200 py-2 pl-8 pr-3 text-sm"
+                />
+              </div>
+            </label>
+          </div>
+        )}
+
         {exportError && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{exportError}</p>}
 
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-4">
@@ -273,7 +338,7 @@ export default function LaporanPage() {
             className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileText className="h-4 w-4" />
-            Generate Laporan
+            {selectedReport === "stok-per-lokasi" ? "Tampilkan Stok" : "Generate Laporan"}
           </button>
           <button
             type="button"

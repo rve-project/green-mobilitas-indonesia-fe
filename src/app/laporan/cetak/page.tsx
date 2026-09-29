@@ -40,7 +40,14 @@ export default function CetakLaporanPage() {
   }
 
   const { start, end, label: periodeLabel } = periodRangeFromSearchParams(searchParams);
-  const result: ReportResult = computeReport(jenis, { start, end }, dataset);
+  const result: ReportResult =
+    jenis === "stok-per-lokasi"
+      ? computeReport(jenis, { start, end }, dataset, {
+          lokasi: searchParams.get("lokasi") || undefined,
+          subLokasi: searchParams.get("subLokasi") || undefined,
+          cariItem: searchParams.get("cariItem") || undefined,
+        })
+      : computeReport(jenis, { start, end }, dataset);
   const tanggalCetak = new Date();
 
   async function handleDownloadPdf() {

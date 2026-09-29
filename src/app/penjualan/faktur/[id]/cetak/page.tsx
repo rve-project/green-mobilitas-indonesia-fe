@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Printer } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import { api } from "@/lib/api";
 import { CompanyProfile, Invoice, Kendaraan, Pelanggan } from "@/lib/types";
 import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { downloadElementAsPdf } from "@/lib/pdfExport";
 
 type Jenis = "invoice" | "proforma" | "kwitansi";
 type Format = "a4" | "dot";
@@ -35,6 +36,8 @@ export default function CetakInvoicePage() {
   const [kendaraanList, setKendaraanList] = useState<Kendaraan[]>([]);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api
@@ -70,6 +73,16 @@ export default function CetakInvoicePage() {
   const pajakNominal = invoice.pajak ?? 0;
   const nomor = nomorDokumen(invoice, jenis);
 
+  async function handleDownloadPdf() {
+    if (!printRef.current) return;
+    setDownloading(true);
+    try {
+      await downloadElementAsPdf(printRef.current, `${nomor}.pdf`, "portrait");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-100 print:bg-white">
       <style>{`@page { size: A4; margin: 12mm; }`}</style>
@@ -82,43 +95,56 @@ export default function CetakInvoicePage() {
           ]}
           className=""
         />
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700"
-        >
-          <Printer className="h-4 w-4" />
-          Cetak
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" />
+            {downloading ? "Membuat PDF..." : "Download PDF"}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700"
+          >
+            <Printer className="h-4 w-4" />
+            Cetak
+          </button>
+        </div>
       </div>
 
-      {format === "dot" ? (
-        <DotMatrixDocument
-          jenis={jenis}
-          nomor={nomor}
-          invoice={invoice}
-          pelanggan={pelanggan}
-          kendaraan={kendaraan}
-          profile={profile}
-          subtotal={subtotal}
-          dpp={dpp}
-          diskonNominal={diskonNominal}
-          pajakNominal={pajakNominal}
-        />
-      ) : (
-        <A4Document
-          jenis={jenis}
-          nomor={nomor}
-          invoice={invoice}
-          pelanggan={pelanggan}
-          kendaraan={kendaraan}
-          profile={profile}
-          subtotal={subtotal}
-          dpp={dpp}
-          diskonNominal={diskonNominal}
-          pajakNominal={pajakNominal}
-        />
-      )}
+      <div ref={printRef}>
+        {format === "dot" ? (
+          <DotMatrixDocument
+            jenis={jenis}
+            nomor={nomor}
+            invoice={invoice}
+            pelanggan={pelanggan}
+            kendaraan={kendaraan}
+            profile={profile}
+            subtotal={subtotal}
+            dpp={dpp}
+            diskonNominal={diskonNominal}
+            pajakNominal={pajakNominal}
+          />
+        ) : (
+          <A4Document
+            jenis={jenis}
+            nomor={nomor}
+            invoice={invoice}
+            pelanggan={pelanggan}
+            kendaraan={kendaraan}
+            profile={profile}
+            subtotal={subtotal}
+            dpp={dpp}
+            diskonNominal={diskonNominal}
+            pajakNominal={pajakNominal}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -158,10 +184,15 @@ function A4Document({
       <div className="relative flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-green.png" alt="Logo" className="h-11 w-11 object-contain" />
+          <img src="/logo-gmi-green.png" alt="Logo" className="h-16 w-16 object-contain" />
           <div>
             <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
             <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
+            <p className="mt-0.5 text-[11px] text-zinc-500">
+              {profile.telepon}
+              {profile.telepon && profile.email ? " · " : ""}
+              {profile.email}
+            </p>
           </div>
         </div>
       </div>
@@ -291,12 +322,6 @@ function A4Document({
           <p className="mb-20">{jenis === "kwitansi" ? "Penerima" : ""}</p>
           <p className="border-t border-zinc-400 pt-1">{profile.namaPerusahaan}</p>
         </div>
-      </div>
-
-      <div className="mt-6 flex items-center justify-between border-t border-zinc-200 pt-2 text-[10px] text-zinc-500">
-        <span>{profile.telepon}</span>
-        <span>{profile.email}</span>
-        <span>{profile.alamat}</span>
       </div>
     </div>
   );
@@ -495,7 +520,13 @@ function DotMatrixDocument({
           </div>
 
           <p className="mt-2 font-bold">KETERANGAN</p>
-          <div className="h-16 border border-black" />
+          <div className="min-h-16 border border-black p-2 text-[10px] leading-snug">
+            <p>- Harap cantumkan nomor invoice ({invoice.kode}) pada berita transfer.</p>
+            <p>
+              - Kirimkan bukti transfer ke WhatsApp {profile.telepon || "-"} atau email {profile.email || "-"}.
+            </p>
+            <p className="mt-1">Terima kasih atas kerja samanya!</p>
+          </div>
         </>
       )}
     </div>

@@ -93,7 +93,18 @@ function humanize(s: string) {
     .join(" ");
 }
 
-export function computeReport(key: ReportKey, period: { start: Date; end: Date }, d: LaporanDataset): ReportResult {
+export interface StokPerLokasiFilter {
+  lokasi?: string;
+  subLokasi?: string;
+  cariItem?: string;
+}
+
+export function computeReport(
+  key: ReportKey,
+  period: { start: Date; end: Date },
+  d: LaporanDataset,
+  stokPerLokasiFilter?: StokPerLokasiFilter
+): ReportResult {
   function inPeriod(iso: string) {
     const t = new Date(iso).getTime();
     return t >= period.start.getTime() && t < period.end.getTime();
@@ -126,18 +137,21 @@ export function computeReport(key: ReportKey, period: { start: Date; end: Date }
       const rows = d.pembelian.filter((p) => inPeriod(p.tanggal));
       const totalOmzet = rows.reduce((s, p) => s + p.total, 0);
       const totalDibayar = rows.reduce((s, p) => s + p.dibayar, 0);
+      const totalQty = rows.reduce((s, p) => s + p.items.reduce((si, it) => si + it.qty, 0), 0);
       return {
         summary: [
           { label: "Jumlah Transaksi", value: String(rows.length) },
+          { label: "Total Qty Dibeli", value: String(totalQty) },
           { label: "Total Pembelian", value: formatRupiah(totalOmzet) },
           { label: "Total Dibayar", value: formatRupiah(totalDibayar) },
           { label: "Outstanding", value: formatRupiah(Math.max(0, totalOmzet - totalDibayar)) },
         ],
-        columns: ["Kode", "Tanggal", "Supplier", "Total", "Dibayar", "Status"],
+        columns: ["Kode", "Tanggal", "Supplier", "Total Qty", "Total", "Dibayar", "Status"],
         rows: rows.map((p) => [
           p.kode,
           formatDate(p.tanggal),
           d.supplierMap.get(p.supplierId) ?? "-",
+          String(p.items.reduce((si, it) => si + it.qty, 0)),
           formatRupiah(p.total),
           formatRupiah(p.dibayar),
           humanize(p.statusPembayaran),
@@ -264,29 +278,30 @@ export function computeReport(key: ReportKey, period: { start: Date; end: Date }
       };
     }
     case "stok-per-lokasi": {
-      const activeLokasi = d.lokasiList.filter((l) => l.status === "aktif");
-      const rowsData = activeLokasi.map((l) => {
-        let jumlahItemBerbeda = 0;
-        let totalQty = 0;
-        let totalNilai = 0;
-        d.allBarang.forEach((b) => {
-          const entries = b.stokLokasi.filter((sl) => sl.lokasi === l.nama);
-          if (entries.length === 0) return;
-          jumlahItemBerbeda += 1;
-          const qty = entries.reduce((s, e) => s + e.jumlah, 0);
-          totalQty += qty;
-          totalNilai += qty * b.hargaBeli;
+      const lokasiFilter = stokPerLokasiFilter?.lokasi?.trim();
+      const subLokasiFilter = stokPerLokasiFilter?.subLokasi?.trim().toLowerCase();
+      const cariItemFilter = stokPerLokasiFilter?.cariItem?.trim().toLowerCase();
+
+      const rowsData: { kode: string; nama: string; lokasi: string; subLokasi: string; qty: number; satuan: string }[] = [];
+      d.allBarang.forEach((b) => {
+        if (cariItemFilter && !b.kode.toLowerCase().includes(cariItemFilter) && !b.nama.toLowerCase().includes(cariItemFilter)) {
+          return;
+        }
+        b.stokLokasi.forEach((sl) => {
+          if (lokasiFilter && sl.lokasi !== lokasiFilter) return;
+          if (subLokasiFilter && !(sl.rak ?? "").toLowerCase().includes(subLokasiFilter)) return;
+          rowsData.push({ kode: b.kode, nama: b.nama, lokasi: sl.lokasi, subLokasi: sl.rak || "-", qty: sl.jumlah, satuan: sl.satuan });
         });
-        return { nama: l.nama, jumlahItemBerbeda, totalQty, totalNilai };
       });
+      rowsData.sort((a, b) => a.nama.localeCompare(b.nama));
+
       return {
         summary: [
-          { label: "Jumlah Lokasi", value: String(activeLokasi.length) },
-          { label: "Total Qty Keseluruhan", value: String(rowsData.reduce((s, r) => s + r.totalQty, 0)) },
-          { label: "Total Nilai Keseluruhan", value: formatRupiah(rowsData.reduce((s, r) => s + r.totalNilai, 0)) },
+          { label: "Total Items", value: String(rowsData.length) },
+          { label: "Total Qty", value: String(rowsData.reduce((s, r) => s + r.qty, 0)) },
         ],
-        columns: ["Lokasi", "Jenis Barang", "Total Qty", "Total Nilai"],
-        rows: rowsData.map((r) => [r.nama, String(r.jumlahItemBerbeda), String(r.totalQty), formatRupiah(r.totalNilai)]),
+        columns: ["Kode Item", "Nama Item", "Lokasi", "Sub Lokasi", "Qty System", "Unit"],
+        rows: rowsData.map((r) => [r.kode, r.nama, r.lokasi, r.subLokasi, String(r.qty), r.satuan]),
       };
     }
     case "laba-rugi": {

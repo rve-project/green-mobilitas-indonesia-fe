@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  CreditCard,
   Download,
   FileText,
   History,
@@ -23,6 +24,14 @@ import {
 import { api } from "@/lib/api";
 import { Lookup, PembayaranHutang, Pembelian, Supplier } from "@/lib/types";
 import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon, labelDiskon } from "@/lib/format";
+import { Select } from "@/components/ui/Select";
+import { RupiahInput } from "@/components/ui/RupiahInput";
+
+const METODE_PEMBAYARAN_OPTIONS = [
+  { value: "Cash", label: "Cash" },
+  { value: "Transfer", label: "Transfer" },
+  { value: "Kartu Debit/Kredit", label: "Kartu Debit/Kredit" },
+];
 
 interface DetailPembelianModalProps {
   pembelianId: string;
@@ -59,8 +68,27 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
   const [syaratLookup, setSyaratLookup] = useState<Lookup[]>([]);
   const [dokumenOpen, setDokumenOpen] = useState(false);
 
-  useEffect(() => {
+  // Catat Pembayaran -- only shown while the purchase isn't fully paid yet (see the
+  // "statusPembayaran !== lunas" guard around its render below).
+  const [bayarMetode, setBayarMetode] = useState("Cash");
+  const [bayarJumlah, setBayarJumlah] = useState("");
+  const [bayarLunas, setBayarLunas] = useState(false);
+  const [bayarSubmitting, setBayarSubmitting] = useState(false);
+  const [bayarError, setBayarError] = useState<string | null>(null);
+
+  function reloadPembayaranHutang() {
     api.pembayaranHutang().then(setPembayaranHutang);
+  }
+
+  function loadPembelian() {
+    api
+      .getPembelian(pembelianId)
+      .then((p) => setFetched({ id: pembelianId, pembelian: p, notFound: false }))
+      .catch(() => setFetched({ id: pembelianId, pembelian: null, notFound: true }));
+  }
+
+  useEffect(() => {
+    reloadPembayaranHutang();
     api.lookup("syarat-pembayaran").then(setSyaratLookup);
   }, []);
 
@@ -74,6 +102,11 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
       .catch(() => {
         if (!cancelled) setFetched({ id: pembelianId, pembelian: null, notFound: true });
       });
+    // Reset the payment form for whichever purchase is now showing.
+    setBayarMetode("Cash");
+    setBayarJumlah("");
+    setBayarLunas(false);
+    setBayarError(null);
     return () => {
       cancelled = true;
     };
@@ -118,6 +151,35 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
   function handlePrint() {
     setDokumenOpen(false);
     router.push(`/pembelian/faktur/${pembelianId}/cetak`);
+  }
+
+  const sisaTagihan = pembelian ? Math.max(0, pembelian.total - (pembelian.returTotal ?? 0) - pembelian.dibayar) : 0;
+
+  function toggleBayarLunas(checked: boolean) {
+    setBayarLunas(checked);
+    if (checked) setBayarJumlah(String(sisaTagihan));
+  }
+
+  async function submitBayar() {
+    if (!pembelian) return;
+    const jumlah = Number(bayarJumlah);
+    if (!jumlah || jumlah <= 0) {
+      setBayarError("Jumlah dibayar harus lebih dari 0");
+      return;
+    }
+    setBayarSubmitting(true);
+    setBayarError(null);
+    try {
+      await api.createPembayaranHutang({ pembelianId: pembelian.id, jumlah, metode: bayarMetode });
+      setBayarJumlah("");
+      setBayarLunas(false);
+      loadPembelian();
+      reloadPembayaranHutang();
+    } catch (err) {
+      setBayarError(err instanceof Error ? err.message : "Gagal mencatat pembayaran");
+    } finally {
+      setBayarSubmitting(false);
+    }
   }
 
   return (
@@ -378,6 +440,63 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
                     )}
                   </div>
                 </div>
+
+                {pembelian.statusPembayaran !== "lunas" && (
+                  <div className="space-y-3 rounded-xl border border-zinc-200 p-4">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      <CreditCard className="h-3.5 w-3.5" /> Catat Pembayaran
+                    </p>
+
+                    {bayarError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{bayarError}</p>}
+
+                    <label className="block text-sm">
+                      <span className="mb-1.5 block text-xs font-medium text-zinc-700">Metode Pembayaran</span>
+                      <Select value={bayarMetode} onChange={setBayarMetode} options={METODE_PEMBAYARAN_OPTIONS} />
+                    </label>
+
+                    <label className="block text-sm">
+                      <span className="mb-1.5 block text-xs font-medium text-zinc-700">Jumlah Dibayar</span>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
+                          Rp
+                        </span>
+                        <RupiahInput
+                          value={bayarJumlah}
+                          onChange={(v) => {
+                            setBayarJumlah(v);
+                            setBayarLunas(false);
+                          }}
+                          disabled={bayarLunas}
+                          placeholder="0"
+                          className="w-full rounded-lg border border-zinc-200 py-2 pl-8 pr-3 text-sm disabled:bg-zinc-50"
+                        />
+                      </div>
+                    </label>
+
+                    <label className="flex cursor-pointer items-center gap-1.5 text-sm text-zinc-600">
+                      <input
+                        type="checkbox"
+                        checked={bayarLunas}
+                        onChange={(e) => toggleBayarLunas(e.target.checked)}
+                        className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                      />
+                      Bayar Lunas
+                    </label>
+
+                    <p className="rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+                      Sisa: <span className="font-semibold text-zinc-700">{formatRupiah(sisaTagihan)}</span>
+                    </p>
+
+                    <button
+                      type="button"
+                      disabled={bayarSubmitting || !bayarJumlah}
+                      onClick={submitBayar}
+                      className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {bayarSubmitting ? "Menyimpan..." : "Catat Pembayaran"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
