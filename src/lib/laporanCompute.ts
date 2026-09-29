@@ -152,9 +152,7 @@ export function computeReport(
           formatDate(p.tanggal),
           d.supplierMap.get(p.supplierId) ?? "-",
           String(p.items.reduce((si, it) => si + it.qty, 0)),
-          p.items
-            .map((it) => `${it.nama}: ${d.barangMap.get(it.itemId)?.stok ?? "-"}`)
-            .join("; "),
+          p.items.map((it) => String(d.barangMap.get(it.itemId)?.stok ?? "-")).join(", "),
           formatRupiah(p.total),
           formatRupiah(p.dibayar),
           humanize(p.statusPembayaran),
