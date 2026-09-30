@@ -59,6 +59,7 @@ const TABS: { key: CatalogTab; label: string; icon: ReactNode }[] = [
 const inputClass =
   "w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500";
 
+
 function roundToNearest(value: number, step: number) {
   if (!step) return value;
   return Math.round(value / step) * step;
@@ -339,9 +340,11 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   const [kilometer, setKilometer] = useState("");
   const [tanggalInvoice, setTanggalInvoice] = useState(todayInputDate);
   const [syaratPembayaran, setSyaratPembayaran] = useState("");
+  const [metodePembayaran, setMetodePembayaran] = useState("");
   const [tanggalJatuhTempo, setTanggalJatuhTempo] = useState("");
   const [potonganPersen, setPotonganPersen] = useState("");
   const [bebasPpn, setBebasPpn] = useState(false);
+  const [statusPekerjaan, setStatusPekerjaan] = useState<"selesai" | "belum_selesai">("selesai");
   const [catatan, setCatatan] = useState("");
   const [dibayar, setDibayar] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -359,9 +362,11 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
       setKeluhan(invoice.keluhan ?? "");
       setTanggalInvoice(toDateInputValue(invoice.tanggal) || todayInputDate());
       setSyaratPembayaran(invoice.syaratPembayaran ?? "");
+      setMetodePembayaran(invoice.metodePembayaran ?? "");
       setTanggalJatuhTempo(toDateInputValue(invoice.jatuhTempo));
       setPotonganPersen(invoice.potonganPersen ? String(invoice.potonganPersen) : "");
       setBebasPpn(Boolean(invoice.bebasPpn));
+      setStatusPekerjaan(invoice.statusPekerjaan ?? "selesai");
       setCatatan(invoice.catatan ?? "");
       setExistingDibayar(invoice.dibayar);
       setWorkingItems(
@@ -450,11 +455,13 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
           tanggal: tanggalInvoice ? new Date(tanggalInvoice).toISOString() : undefined,
           jatuhTempo: tanggalJatuhTempo ? new Date(tanggalJatuhTempo).toISOString() : undefined,
           syaratPembayaran: syaratPembayaran || undefined,
+          metodePembayaran: metodePembayaran || undefined,
           catatan: catatan || undefined,
           keluhan: keluhan || undefined,
           kilometer: Number(kilometer) || undefined,
           potonganPersen: potongan || undefined,
           bebasPpn,
+          statusPekerjaan,
           items,
         });
         router.push("/penjualan/faktur");
@@ -467,11 +474,13 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
         tanggal: tanggalInvoice ? new Date(tanggalInvoice).toISOString() : undefined,
         jatuhTempo: tanggalJatuhTempo ? new Date(tanggalJatuhTempo).toISOString() : undefined,
         syaratPembayaran: syaratPembayaran || undefined,
+        metodePembayaran: metodePembayaran || undefined,
         catatan: catatan || undefined,
         keluhan: keluhan || undefined,
         kilometer: Number(kilometer) || undefined,
         potonganPersen: potongan || undefined,
         bebasPpn,
+        statusPekerjaan,
         dibayar: Number(dibayar) || 0,
         items,
       });
@@ -891,28 +900,30 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                 </button>
                 {kendaraanPickerOpen && (
                   <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white p-2 shadow-lg">
-                    {kendaraanMilikPelanggan.length === 0 ? (
-                      <p className="px-2 py-1.5 text-sm text-zinc-400">Pelanggan ini belum punya kendaraan terdaftar</p>
-                    ) : (
-                      kendaraanMilikPelanggan.map((k) => (
-                        <label key={k.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-zinc-50">
-                          <input
-                            type="checkbox"
-                            checked={kendaraanIds.includes(k.id)}
-                            onChange={() => toggleKendaraan(k.id)}
-                            className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
-                          />
-                          {k.platNomor} · {k.merk} {k.model}
-                        </label>
-                      ))
-                    )}
+                    <div className="max-h-64 overflow-y-auto">
+                      {kendaraanMilikPelanggan.length === 0 ? (
+                        <p className="px-2 py-1.5 text-sm text-zinc-400">Pelanggan ini belum punya kendaraan terdaftar</p>
+                      ) : (
+                        kendaraanMilikPelanggan.map((k) => (
+                          <label key={k.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-zinc-50">
+                            <input
+                              type="checkbox"
+                              checked={kendaraanIds.includes(k.id)}
+                              onChange={() => toggleKendaraan(k.id)}
+                              className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                            />
+                            {k.platNomor} · {k.merk} {k.model}
+                          </label>
+                        ))
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
                         setKendaraanPickerOpen(false);
                         setShowTambahKendaraan(true);
                       }}
-                      className="mt-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50"
+                      className="mt-1 flex w-full items-center gap-2 rounded border-t border-zinc-100 px-2 py-1.5 pt-2.5 text-sm font-medium text-green-600 hover:bg-green-50"
                     >
                       <Plus className="h-3.5 w-3.5" /> Tambah Kendaraan Baru
                     </button>
@@ -975,6 +986,16 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-zinc-700">Tanggal Jatuh Tempo</span>
                 <DateInput value={tanggalJatuhTempo} onChange={setTanggalJatuhTempo} />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-zinc-700">Metode Pembayaran</span>
+                <LookupSearchSelectField
+                  tipe="tipe-pembayaran"
+                  label="Metode Pembayaran"
+                  value={metodePembayaran}
+                  onChange={setMetodePembayaran}
+                  placeholder="Cari metode pembayaran..."
+                />
               </label>
             </div>
           </div>
@@ -1061,6 +1082,18 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                   Bebas PPN untuk invoice ini
                 </label>
               )}
+
+              <label className="block border-t border-zinc-100 pt-3">
+                <span className="mb-1.5 block text-sm font-medium text-zinc-700">Status Pekerjaan</span>
+                <Select
+                  value={statusPekerjaan}
+                  onChange={(v) => setStatusPekerjaan(v as "selesai" | "belum_selesai")}
+                  options={[
+                    { value: "selesai", label: "Selesai" },
+                    { value: "belum_selesai", label: "Belum Selesai (menunggu part/lainnya)" },
+                  ]}
+                />
+              </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-zinc-700">Catatan</span>

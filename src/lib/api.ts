@@ -280,11 +280,13 @@ export const api = {
     tanggal?: string;
     jatuhTempo?: string;
     syaratPembayaran?: string;
+    metodePembayaran?: string;
     catatan?: string;
     keluhan?: string;
     potonganPersen?: number;
     bebasPpn?: boolean;
     status?: Invoice["status"];
+    statusPekerjaan?: Invoice["statusPekerjaan"];
     dibayar?: number;
     items: {
       tipe: "barang" | "jasa";
@@ -301,13 +303,14 @@ export const api = {
   getInvoice: (id: string) => get<Invoice>(`/invoice/${id}`),
   updateInvoice: (
     id: string,
-    data: Partial<Pick<Invoice, "status" | "dibayar">> & {
+    data: Partial<Pick<Invoice, "status" | "statusPekerjaan" | "dibayar">> & {
       pelangganId?: string;
       kendaraanIds?: string[];
       kilometer?: number;
       tanggal?: string;
       jatuhTempo?: string;
       syaratPembayaran?: string;
+      metodePembayaran?: string;
       catatan?: string;
       keluhan?: string;
       potonganPersen?: number;

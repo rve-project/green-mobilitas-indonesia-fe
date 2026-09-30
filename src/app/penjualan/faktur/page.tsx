@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Plus, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { Invoice, Kendaraan, Pelanggan, StatusInvoice } from "@/lib/types";
 import { formatDateLong, formatRupiah, withinLastDays } from "@/lib/format";
@@ -26,16 +26,27 @@ const PERIOD_OPTIONS = [
   { value: 36500, label: "Semua Waktu" },
 ];
 
-function StatusBadge({ status }: { status: StatusInvoice }) {
-  const config = {
-    selesai: { label: "Selesai", className: "bg-emerald-50 text-emerald-600" },
-    draft: { label: "Draft", className: "bg-zinc-100 text-zinc-600" },
-    dibatalkan: { label: "Dibatalkan", className: "bg-red-50 text-red-500" },
-  }[status];
+const STATUS_PEKERJAAN_OPTIONS = [
+  { value: "selesai", label: "Selesai" },
+  { value: "belum_selesai", label: "Belum Selesai" },
+];
+
+function StatusPekerjaanSelect({
+  status,
+  onChange,
+}: {
+  status: Invoice["statusPekerjaan"];
+  onChange: (value: "selesai" | "belum_selesai") => void;
+}) {
   return (
-    <span className={clsx("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold", config.className)}>
-      {config.label}
-    </span>
+    <div onClick={(e) => e.stopPropagation()}>
+      <Select
+        value={status ?? "selesai"}
+        onChange={(v) => onChange(v as "selesai" | "belum_selesai")}
+        options={STATUS_PEKERJAAN_OPTIONS}
+        className="w-40"
+      />
+    </div>
   );
 }
 
@@ -52,6 +63,59 @@ function PembayaranBadge({ status }: { status: Invoice["statusPembayaran"] }) {
   );
 }
 
+type SortKey =
+  | "kode"
+  | "customer"
+  | "kendaraan"
+  | "plat"
+  | "tanggal"
+  | "total"
+  | "statusPekerjaan"
+  | "statusPembayaran";
+type SortDir = "asc" | "desc";
+
+function SortableTh({
+  label,
+  sortKey,
+  activeKey,
+  dir,
+  onSort,
+  align,
+}: {
+  label: string;
+  sortKey: SortKey;
+  activeKey: SortKey;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+  align?: "right";
+}) {
+  const active = activeKey === sortKey;
+  return (
+    <th className={clsx("py-2 font-medium", align === "right" ? "pr-4 text-right" : "pr-4")}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={clsx(
+          "inline-flex w-full items-center gap-1 hover:text-zinc-700",
+          align === "right" && "justify-end",
+          active && "text-zinc-700"
+        )}
+      >
+        {label}
+        {active ? (
+          dir === "asc" ? (
+            <ChevronUp className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5" />
+          )
+        ) : (
+          <ChevronsUpDown className="h-3.5 w-3.5 text-zinc-300" />
+        )}
+      </button>
+    </th>
+  );
+}
+
 export default function FakturPenjualanPage() {
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice[] | null>(null);
@@ -63,6 +127,28 @@ export default function FakturPenjualanPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("kode");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  }
+
+  async function handleStatusPekerjaanChange(id: string, value: "selesai" | "belum_selesai") {
+    const previous = invoice?.find((inv) => inv.id === id)?.statusPekerjaan;
+    setInvoice((prev) => prev?.map((inv) => (inv.id === id ? { ...inv, statusPekerjaan: value } : inv)) ?? null);
+    try {
+      await api.updateInvoice(id, { statusPekerjaan: value });
+    } catch {
+      setInvoice((prev) => prev?.map((inv) => (inv.id === id ? { ...inv, statusPekerjaan: previous } : inv)) ?? null);
+    }
+  }
 
   useEffect(() => {
     api.invoice().then(setInvoice);
@@ -72,6 +158,47 @@ export default function FakturPenjualanPage() {
 
   const pelangganMap = useMemo(() => new Map(pelanggan.map((p) => [p.id, p.nama])), [pelanggan]);
   const namaPelanggan = (id: string) => pelangganMap.get(id) ?? "-";
+  const kendaraanLabel = (inv: Invoice) =>
+    kendaraan
+      .filter((k) => inv.kendaraanIds?.includes(k.id))
+      .map((k) => `${k.merk} ${k.model}`)
+      .join(", ");
+  const platLabel = (inv: Invoice) =>
+    kendaraan
+      .filter((k) => inv.kendaraanIds?.includes(k.id))
+      .map((k) => k.platNomor)
+      .join(", ");
+
+  const STATUS_PEKERJAAN_ORDER: Record<NonNullable<Invoice["statusPekerjaan"]>, number> = {
+    belum_selesai: 0,
+    selesai: 1,
+  };
+  const STATUS_PEMBAYARAN_ORDER: Record<Invoice["statusPembayaran"], number> = {
+    belum_dibayar: 0,
+    dibayar_setengah: 1,
+    lunas: 2,
+  };
+
+  function sortValue(inv: Invoice, key: SortKey): string | number {
+    switch (key) {
+      case "kode":
+        return inv.kode;
+      case "customer":
+        return namaPelanggan(inv.pelangganId).toLowerCase();
+      case "kendaraan":
+        return kendaraanLabel(inv).toLowerCase();
+      case "plat":
+        return platLabel(inv).toLowerCase();
+      case "tanggal":
+        return new Date(inv.tanggal).getTime();
+      case "total":
+        return inv.total;
+      case "statusPekerjaan":
+        return STATUS_PEKERJAAN_ORDER[inv.statusPekerjaan ?? "selesai"];
+      case "statusPembayaran":
+        return STATUS_PEMBAYARAN_ORDER[inv.statusPembayaran];
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!invoice) return null;
@@ -88,8 +215,14 @@ export default function FakturPenjualanPage() {
           kendaraanInv.some((k) => k.platNomor.toLowerCase().includes(q))
         );
       })
-      .sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [invoice, tab, search, periodDays, kendaraan, pelangganMap]);
+      .sort((a, b) => {
+        const va = sortValue(a, sortKey);
+        const vb = sortValue(b, sortKey);
+        const cmp = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb));
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice, tab, search, periodDays, kendaraan, pelangganMap, sortKey, sortDir]);
 
   const summary = useMemo(() => {
     const scoped = invoice?.filter((inv) => inv.status === tab && withinLastDays(inv.tanggal, periodDays)) ?? [];
@@ -194,12 +327,33 @@ export default function FakturPenjualanPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-4 font-medium">Kode</th>
-                  <th className="py-2 pr-4 font-medium">Customer</th>
-                  <th className="py-2 pr-4 font-medium">Tgl Penjualan</th>
-                  <th className="py-2 pr-4 text-right font-medium">Total</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-0 font-medium">Pembayaran</th>
+                  <SortableTh label="Kode" sortKey="kode" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Customer" sortKey="customer" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Kendaraan" sortKey="kendaraan" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Plat Nomor" sortKey="plat" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Tgl Penjualan" sortKey="tanggal" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                  <SortableTh
+                    label="Total"
+                    sortKey="total"
+                    activeKey={sortKey}
+                    dir={sortDir}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Status Pekerjaan"
+                    sortKey="statusPekerjaan"
+                    activeKey={sortKey}
+                    dir={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortableTh
+                    label="Pembayaran"
+                    sortKey="statusPembayaran"
+                    activeKey={sortKey}
+                    dir={sortDir}
+                    onSort={handleSort}
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -211,6 +365,8 @@ export default function FakturPenjualanPage() {
                   >
                     <td className="py-3 pr-4 font-semibold text-green-600">{inv.kode}</td>
                     <td className="py-3 pr-4 text-zinc-700">{namaPelanggan(inv.pelangganId)}</td>
+                    <td className="py-3 pr-4 text-zinc-700">{kendaraanLabel(inv) || "-"}</td>
+                    <td className="py-3 pr-4 text-zinc-700">{platLabel(inv) || "-"}</td>
                     <td className="py-3 pr-4 text-zinc-500">{formatDateLong(inv.tanggal)}</td>
                     <td className="py-3 pr-4 text-right">
                       <p className="font-semibold text-zinc-900">{formatRupiah(inv.total)}</p>
@@ -219,7 +375,10 @@ export default function FakturPenjualanPage() {
                       )}
                     </td>
                     <td className="py-3 pr-4">
-                      <StatusBadge status={inv.status} />
+                      <StatusPekerjaanSelect
+                        status={inv.statusPekerjaan}
+                        onChange={(v) => handleStatusPekerjaanChange(inv.id, v)}
+                      />
                     </td>
                     <td className="py-3 pr-0">
                       <PembayaranBadge status={inv.statusPembayaran} />

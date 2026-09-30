@@ -185,6 +185,7 @@ export interface Servis {
 
 export type StatusInvoice = "selesai" | "draft" | "dibatalkan";
 export type StatusPembayaran = "lunas" | "belum_dibayar" | "dibayar_setengah";
+export type StatusPekerjaan = "selesai" | "belum_selesai";
 
 export interface InvoiceItem {
   tipe: PaketItemTipe;
@@ -209,6 +210,7 @@ export interface Invoice {
   tanggal: string;
   jatuhTempo?: string;
   syaratPembayaran?: string;
+  metodePembayaran?: string;
   catatan?: string;
   keluhan?: string;
   items: InvoiceItem[];
@@ -222,6 +224,7 @@ export interface Invoice {
   dibayar: number;
   returTotal?: number;
   status: StatusInvoice;
+  statusPekerjaan?: StatusPekerjaan;
   statusPembayaran: StatusPembayaran;
   createdAt: string;
 }

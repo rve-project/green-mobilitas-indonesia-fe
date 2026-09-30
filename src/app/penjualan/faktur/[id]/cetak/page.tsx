@@ -486,7 +486,14 @@ function DotMatrixDocument({
           </div>
 
           <p className="mt-2 font-bold">KETERANGAN</p>
-          <div className="h-16 border border-black" />
+          <div className="min-h-16 space-y-0.5 border border-black p-2 text-[10px]">
+            {invoice.metodePembayaran && (
+              <p>
+                <span className="font-semibold">Cara Bayar</span>: {invoice.metodePembayaran}
+              </p>
+            )}
+            {invoice.catatan && <p>{invoice.catatan}</p>}
+          </div>
         </>
       )}
     </div>

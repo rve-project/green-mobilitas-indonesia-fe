@@ -233,6 +233,7 @@ export function PembelianForm({ mode, pembelianId }: PembelianFormProps) {
   const [tanggalInvoice, setTanggalInvoice] = useState(todayInputDate);
   const [noInvoiceSupplier, setNoInvoiceSupplier] = useState("");
   const [syaratPembayaran, setSyaratPembayaran] = useState("");
+  const [metodePembayaranUmum, setMetodePembayaranUmum] = useState("");
   const [tanggalJatuhTempo, setTanggalJatuhTempo] = useState("");
   const [potonganPersen, setPotonganPersen] = useState("");
   const [biayaPengiriman, setBiayaPengiriman] = useState("");
@@ -259,6 +260,7 @@ export function PembelianForm({ mode, pembelianId }: PembelianFormProps) {
       setTanggalInvoice(p.tanggal ? p.tanggal.slice(0, 10) : todayInputDate());
       setNoInvoiceSupplier(p.noInvoiceSupplier ?? "");
       setSyaratPembayaran(p.syaratPembayaran ?? "");
+      setMetodePembayaranUmum(p.metodePembayaran ?? "");
       setTanggalJatuhTempo(p.jatuhTempo ? p.jatuhTempo.slice(0, 10) : "");
       setPotonganPersen(p.potonganPersen ? String(p.potonganPersen) : "");
       setBiayaPengiriman(p.biayaPengiriman ? String(p.biayaPengiriman) : "");
@@ -360,6 +362,7 @@ export function PembelianForm({ mode, pembelianId }: PembelianFormProps) {
           tanggal: tanggalInvoice ? new Date(tanggalInvoice).toISOString() : undefined,
           jatuhTempo: tanggalJatuhTempo ? new Date(tanggalJatuhTempo).toISOString() : undefined,
           syaratPembayaran: syaratPembayaran || undefined,
+          metodePembayaran: metodePembayaranUmum || undefined,
           noInvoiceSupplier: noInvoiceSupplier || undefined,
           catatan: catatan || undefined,
           potonganPersen: potongan || undefined,
@@ -383,7 +386,8 @@ export function PembelianForm({ mode, pembelianId }: PembelianFormProps) {
         biayaPengiriman: ongkir || undefined,
         biayaLainnya: lainnya || undefined,
         bebasPpn,
-        metodePembayaran: paymentMethods.map((p) => p.metode).join(", ") || undefined,
+        metodePembayaran:
+          (paymentSectionOpen ? paymentMethods.map((p) => p.metode).join(", ") : "") || metodePembayaranUmum || undefined,
         catatanPembayaran: catatanPembayaran || undefined,
         status,
         dibayar: totalDibayar,
@@ -789,6 +793,16 @@ export function PembelianForm({ mode, pembelianId }: PembelianFormProps) {
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-zinc-700">Tanggal Jatuh Tempo</span>
                 <DateInput value={tanggalJatuhTempo} onChange={setTanggalJatuhTempo} />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-zinc-700">Metode Pembayaran</span>
+                <LookupSearchSelectField
+                  tipe="tipe-pembayaran"
+                  label="Metode Pembayaran"
+                  value={metodePembayaranUmum}
+                  onChange={setMetodePembayaranUmum}
+                  placeholder="Cari metode pembayaran..."
+                />
               </label>
             </div>
           </div>
