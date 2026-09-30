@@ -10,6 +10,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 
 const PERIOD_OPTIONS = [
   { value: 7, label: "7 Hari Terakhir" },
@@ -17,6 +19,8 @@ const PERIOD_OPTIONS = [
   { value: 90, label: "90 Hari Terakhir" },
   { value: 36500, label: "Semua Waktu" },
 ];
+
+type SortKey = "kode" | "tanggal" | "lokasi" | "jumlahItem" | "itemSelisih";
 
 export default function StokOpnamePage() {
   const router = useRouter();
@@ -26,6 +30,7 @@ export default function StokOpnamePage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [exporting, setExporting] = useState(false);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode");
 
   // Exports with the same period + search filter the list is showing.
   async function handleExport() {
@@ -43,6 +48,21 @@ export default function StokOpnamePage() {
     api.stokOpname().then(setStokOpname);
   }, []);
 
+  function sortValue(s: StokOpname, key: SortKey): string | number {
+    switch (key) {
+      case "kode":
+        return s.kode;
+      case "tanggal":
+        return new Date(s.tanggal).getTime();
+      case "lokasi":
+        return s.lokasi.toLowerCase();
+      case "jumlahItem":
+        return s.items.length;
+      case "itemSelisih":
+        return s.totalSelisihItem;
+    }
+  }
+
   const filtered = useMemo(() => {
     if (!stokOpname) return null;
     const q = search.trim().toLowerCase();
@@ -52,8 +72,9 @@ export default function StokOpnamePage() {
         if (!q) return true;
         return s.kode.toLowerCase().includes(q) || s.lokasi.toLowerCase().includes(q);
       })
-      .sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [stokOpname, search, periodDays]);
+      .sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stokOpname, search, periodDays, criteria]);
 
   const summary = useMemo(() => {
     const scoped = stokOpname?.filter((s) => withinLastDays(s.tanggal, periodDays)) ?? [];
@@ -130,6 +151,9 @@ export default function StokOpnamePage() {
             className="w-44"
             options={PERIOD_OPTIONS.map((opt) => ({ value: String(opt.value), label: opt.label }))}
           />
+          <div className="flex items-center">
+            <SortResetButton visible={!isDefault} onReset={resetSort} />
+          </div>
         </div>
 
         {!filtered ? (
@@ -141,11 +165,23 @@ export default function StokOpnamePage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-4 font-medium">Kode</th>
-                  <th className="py-2 pr-4 font-medium">Tanggal</th>
-                  <th className="py-2 pr-4 font-medium">Lokasi</th>
-                  <th className="py-2 pr-4 text-right font-medium">Jumlah Item</th>
-                  <th className="py-2 pr-0 text-right font-medium">Item Selisih</th>
+                  <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Tanggal" sortKey="tanggal" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Lokasi" sortKey="lokasi" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh
+                    label="Jumlah Item"
+                    sortKey="jumlahItem"
+                    criteria={criteria}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Item Selisih"
+                    sortKey="itemSelisih"
+                    criteria={criteria}
+                    onSort={toggleSort}
+                    align="right"
+                  />
                 </tr>
               </thead>
               <tbody>

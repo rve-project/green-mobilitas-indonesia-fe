@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 
 const PERIOD_OPTIONS = [
   { value: 7, label: "7 Hari Terakhir" },
@@ -37,6 +39,13 @@ function StatusBadge({ status }: { status: StatusPengeluaranBarang }) {
   );
 }
 
+type SortKey = "kode" | "tanggal" | "jumlahItem" | "alasan" | "dibuatOleh" | "status";
+
+const STATUS_ORDER: Record<StatusPengeluaranBarang, number> = {
+  draft: 0,
+  terposting: 1,
+};
+
 export default function PengeluaranBarangPage() {
   const router = useRouter();
   const [data, setData] = useState<PengeluaranBarang[] | null>(null);
@@ -45,10 +54,28 @@ export default function PengeluaranBarangPage() {
   const [status, setStatus] = useState<"" | StatusPengeluaranBarang>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode");
 
   useEffect(() => {
     api.pengeluaranBarang().then(setData);
   }, []);
+
+  function sortValue(d: PengeluaranBarang, key: SortKey): string | number {
+    switch (key) {
+      case "kode":
+        return d.kode;
+      case "tanggal":
+        return new Date(d.tanggal).getTime();
+      case "jumlahItem":
+        return d.items.length;
+      case "alasan":
+        return d.alasan.toLowerCase();
+      case "dibuatOleh":
+        return (d.dibuatOleh ?? "").toLowerCase();
+      case "status":
+        return STATUS_ORDER[d.status];
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!data) return null;
@@ -57,8 +84,9 @@ export default function PengeluaranBarangPage() {
       .filter((d) => withinLastDays(d.tanggal, periodDays))
       .filter((d) => !status || d.status === status)
       .filter((d) => !q || d.kode.toLowerCase().includes(q))
-      .sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [data, search, periodDays, status]);
+      .sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, search, periodDays, status, criteria]);
 
   return (
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
@@ -118,6 +146,9 @@ export default function PengeluaranBarangPage() {
             />
           </label>
         </div>
+        <div className="flex items-center justify-end">
+          <SortResetButton visible={!isDefault} onReset={resetSort} />
+        </div>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -130,12 +161,23 @@ export default function PengeluaranBarangPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-4 font-medium">Nomor Pengeluaran</th>
-                  <th className="py-2 pr-4 font-medium">Tanggal</th>
-                  <th className="py-2 pr-4 text-right font-medium">Jumlah Item</th>
-                  <th className="py-2 pr-4 font-medium">Alasan</th>
-                  <th className="py-2 pr-4 font-medium">Dibuat Oleh</th>
-                  <th className="py-2 pr-0 font-medium">Status</th>
+                  <SortableTh label="Nomor Pengeluaran" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Tanggal" sortKey="tanggal" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh
+                    label="Jumlah Item"
+                    sortKey="jumlahItem"
+                    criteria={criteria}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh label="Alasan" sortKey="alasan" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh
+                    label="Dibuat Oleh"
+                    sortKey="dibuatOleh"
+                    criteria={criteria}
+                    onSort={toggleSort}
+                  />
+                  <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
                 </tr>
               </thead>
               <tbody>

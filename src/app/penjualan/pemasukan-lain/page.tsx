@@ -4,12 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { FileText, Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
-import { PemasukanLain } from "@/lib/types";
+import { PemasukanLain, StatusPemasukan } from "@/lib/types";
 import { formatDateLong, formatRupiah } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { TambahPemasukanLainModal } from "@/components/penjualan/TambahPemasukanLainModal";
+
+type SortKey = "kategori" | "deskripsi" | "tanggal" | "status" | "jumlah";
+
+const STATUS_ORDER: Record<StatusPemasukan, number> = {
+  selesai: 0,
+  dibatalkan: 1,
+};
 
 export default function PemasukanLainPage() {
   const [data, setData] = useState<PemasukanLain[] | null>(null);
@@ -19,6 +28,7 @@ export default function PemasukanLainPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("tanggal", "desc");
 
   useEffect(() => {
     api.pemasukanLain().then(setData);
@@ -40,10 +50,26 @@ export default function PemasukanLainPage() {
     });
   }, [data, search, kategoriFilter, statusFilter]);
 
-  const sortedFiltered = useMemo(
-    () => (filtered ? [...filtered].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()) : null),
-    [filtered]
-  );
+  function sortValue(d: PemasukanLain, key: SortKey): string | number {
+    switch (key) {
+      case "kategori":
+        return d.kategori.toLowerCase();
+      case "deskripsi":
+        return (d.deskripsi ?? "").toLowerCase();
+      case "tanggal":
+        return new Date(d.tanggal).getTime();
+      case "status":
+        return STATUS_ORDER[d.status];
+      case "jumlah":
+        return d.jumlah;
+    }
+  }
+
+  const sortedFiltered = useMemo(() => {
+    if (!filtered) return null;
+    return [...filtered].sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, criteria]);
 
   return (
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
@@ -106,6 +132,9 @@ export default function PemasukanLainPage() {
               { value: "dibatalkan", label: "Dibatalkan" },
             ]}
           />
+          <div className="flex items-center">
+            <SortResetButton visible={!isDefault} onReset={resetSort} />
+          </div>
         </div>
 
         {!sortedFiltered ? (
@@ -121,11 +150,17 @@ export default function PemasukanLainPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-4 font-medium">Kategori</th>
-                  <th className="py-2 pr-4 font-medium">Deskripsi</th>
-                  <th className="py-2 pr-4 font-medium">Tanggal</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-0 text-right font-medium">Jumlah</th>
+                  <SortableTh label="Kategori" sortKey="kategori" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Deskripsi" sortKey="deskripsi" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Tanggal" sortKey="tanggal" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh
+                    label="Jumlah"
+                    sortKey="jumlah"
+                    criteria={criteria}
+                    onSort={toggleSort}
+                    align="right"
+                  />
                 </tr>
               </thead>
               <tbody>

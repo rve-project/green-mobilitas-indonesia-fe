@@ -10,7 +10,16 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { TambahPelangganModal } from "@/components/pelanggan/TambahPelangganModal";
+
+type SortKey = "kode" | "nama" | "email" | "telepon" | "status";
+
+const STATUS_ORDER: Record<Pelanggan["status"], number> = {
+  aktif: 0,
+  nonaktif: 1,
+};
 
 export default function PelangganPage() {
   const router = useRouter();
@@ -21,6 +30,7 @@ export default function PelangganPage() {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
   function refresh() {
     api.pelanggan().then(setPelanggan);
@@ -31,6 +41,21 @@ export default function PelangganPage() {
     refresh();
   }, []);
 
+  function sortValue(p: Pelanggan, key: SortKey): string | number {
+    switch (key) {
+      case "kode":
+        return p.kode.toLowerCase();
+      case "nama":
+        return p.nama.toLowerCase();
+      case "email":
+        return (p.email ?? "").toLowerCase();
+      case "telepon":
+        return (p.telepon ?? "").toLowerCase();
+      case "status":
+        return STATUS_ORDER[p.status];
+    }
+  }
+
   const filtered = useMemo(() => {
     if (!pelanggan) return null;
     const q = search.trim().toLowerCase();
@@ -40,8 +65,9 @@ export default function PelangganPage() {
         const matchesStatus = !statusFilter || p.status === statusFilter;
         return matchesSearch && matchesStatus;
       })
-      .sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [pelanggan, search, statusFilter]);
+      .sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pelanggan, search, statusFilter, criteria]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;
 
@@ -104,7 +130,10 @@ export default function PelangganPage() {
             </div>
           </div>
           <div>
-            <p className="mb-1.5 text-sm font-medium text-zinc-700">Status</p>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-sm font-medium text-zinc-700">Status</p>
+              <SortResetButton visible={!isDefault} onReset={resetSort} />
+            </div>
             <Select
               value={statusFilter}
               onChange={(v) => {
@@ -131,11 +160,11 @@ export default function PelangganPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                    <th className="py-2 pr-4 font-medium">Kode Pelanggan</th>
-                    <th className="py-2 pr-4 font-medium">Nama Pelanggan</th>
-                    <th className="py-2 pr-4 font-medium">Email</th>
-                    <th className="py-2 pr-4 font-medium">No. Handphone</th>
-                    <th className="py-2 pr-4 font-medium">Status</th>
+                    <SortableTh label="Kode Pelanggan" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Nama Pelanggan" sortKey="nama" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Email" sortKey="email" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="No. Handphone" sortKey="telepon" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
                   </tr>
                 </thead>
                 <tbody>

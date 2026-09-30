@@ -5,13 +5,29 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
-import { Pembelian, StatusPembelian, Supplier } from "@/lib/types";
+import { Pembelian, StatusPembayaran, StatusPembelian, Supplier } from "@/lib/types";
 import { formatDateLong, formatRupiah, withinLastDays } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { DetailPembelianModal } from "@/components/pembelian/DetailPembelianModal";
+
+type SortKey = "kode" | "supplier" | "tanggal" | "total" | "status" | "statusPembayaran";
+
+const STATUS_ORDER: Record<StatusPembelian, number> = {
+  draft: 0,
+  selesai: 1,
+  dibatalkan: 2,
+};
+
+const STATUS_PEMBAYARAN_ORDER: Record<StatusPembayaran, number> = {
+  belum_dibayar: 0,
+  dibayar_setengah: 1,
+  lunas: 2,
+};
 
 const TABS: { key: StatusPembelian; label: string }[] = [
   { key: "selesai", label: "Faktur" },
@@ -62,6 +78,7 @@ export default function FakturPembelianPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
   useEffect(() => {
     api.pembelian().then(setPembelian);
@@ -70,6 +87,23 @@ export default function FakturPembelianPage() {
 
   const supplierMap = useMemo(() => new Map(supplier.map((s) => [s.id, s.nama])), [supplier]);
   const namaSupplier = (id: string) => supplierMap.get(id) ?? "-";
+
+  function sortValue(p: Pembelian, key: SortKey): string | number {
+    switch (key) {
+      case "kode":
+        return p.kode.toLowerCase();
+      case "supplier":
+        return namaSupplier(p.supplierId).toLowerCase();
+      case "tanggal":
+        return new Date(p.tanggal).getTime();
+      case "total":
+        return p.total;
+      case "status":
+        return STATUS_ORDER[p.status];
+      case "statusPembayaran":
+        return STATUS_PEMBAYARAN_ORDER[p.statusPembayaran];
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!pembelian) return null;
@@ -81,8 +115,9 @@ export default function FakturPembelianPage() {
         if (!q) return true;
         return p.kode.toLowerCase().includes(q) || (supplierMap.get(p.supplierId) ?? "").toLowerCase().includes(q);
       })
-      .sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [pembelian, tab, search, periodDays, supplierMap]);
+      .sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pembelian, tab, search, periodDays, supplierMap, criteria]);
 
   const summary = useMemo(() => {
     const scoped = pembelian?.filter((p) => p.status === tab && withinLastDays(p.tanggal, periodDays)) ?? [];
@@ -155,6 +190,9 @@ export default function FakturPembelianPage() {
               className="w-44"
               options={PERIOD_OPTIONS.map((opt) => ({ value: String(opt.value), label: opt.label }))}
             />
+            <div className="flex items-center">
+              <SortResetButton visible={!isDefault} onReset={resetSort} />
+            </div>
           </div>
         </div>
 
@@ -186,12 +224,12 @@ export default function FakturPembelianPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-4 font-medium">Kode</th>
-                  <th className="py-2 pr-4 font-medium">Supplier</th>
-                  <th className="py-2 pr-4 font-medium">Tgl Pembelian</th>
-                  <th className="py-2 pr-4 text-right font-medium">Total</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-0 font-medium">Pembayaran</th>
+                  <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Supplier" sortKey="supplier" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Tgl Pembelian" sortKey="tanggal" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Total" sortKey="total" criteria={criteria} onSort={toggleSort} align="right" />
+                  <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Pembayaran" sortKey="statusPembayaran" criteria={criteria} onSort={toggleSort} />
                 </tr>
               </thead>
               <tbody>

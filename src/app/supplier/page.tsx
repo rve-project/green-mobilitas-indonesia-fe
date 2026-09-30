@@ -10,7 +10,16 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { TambahSupplierModal } from "@/components/supplier/TambahSupplierModal";
+
+type SortKey = "kode" | "nama" | "email" | "telepon" | "kota" | "tipe" | "status";
+
+const STATUS_ORDER: Record<Supplier["status"], number> = {
+  aktif: 0,
+  nonaktif: 1,
+};
 
 export default function SupplierPage() {
   const router = useRouter();
@@ -21,6 +30,7 @@ export default function SupplierPage() {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
   function refresh() {
     api.supplier().then(setSupplier);
@@ -31,6 +41,25 @@ export default function SupplierPage() {
     refresh();
   }, []);
 
+  function sortValue(s: Supplier, key: SortKey): string | number {
+    switch (key) {
+      case "kode":
+        return s.kode.toLowerCase();
+      case "nama":
+        return s.nama.toLowerCase();
+      case "email":
+        return (s.email ?? "").toLowerCase();
+      case "telepon":
+        return (s.telepon ?? "").toLowerCase();
+      case "kota":
+        return (s.kota ?? "").toLowerCase();
+      case "tipe":
+        return (s.tipe ?? "").toLowerCase();
+      case "status":
+        return STATUS_ORDER[s.status];
+    }
+  }
+
   const filtered = useMemo(() => {
     if (!supplier) return null;
     const q = search.trim().toLowerCase();
@@ -40,8 +69,9 @@ export default function SupplierPage() {
         const matchesStatus = !statusFilter || s.status === statusFilter;
         return matchesSearch && matchesStatus;
       })
-      .sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [supplier, search, statusFilter]);
+      .sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplier, search, statusFilter, criteria]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;
 
@@ -104,7 +134,10 @@ export default function SupplierPage() {
             </div>
           </div>
           <div>
-            <p className="mb-1.5 text-sm font-medium text-zinc-700">Status</p>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-sm font-medium text-zinc-700">Status</p>
+              <SortResetButton visible={!isDefault} onReset={resetSort} />
+            </div>
             <Select
               value={statusFilter}
               onChange={(v) => {
@@ -131,13 +164,13 @@ export default function SupplierPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                    <th className="py-2 pr-4 font-medium">Kode Supplier</th>
-                    <th className="py-2 pr-4 font-medium">Nama Supplier</th>
-                    <th className="py-2 pr-4 font-medium">Email</th>
-                    <th className="py-2 pr-4 font-medium">No. Handphone</th>
-                    <th className="py-2 pr-4 font-medium">Kota</th>
-                    <th className="py-2 pr-4 font-medium">Tipe</th>
-                    <th className="py-2 pr-4 font-medium">Status</th>
+                    <SortableTh label="Kode Supplier" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Nama Supplier" sortKey="nama" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Email" sortKey="email" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="No. Handphone" sortKey="telepon" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Kota" sortKey="kota" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Tipe" sortKey="tipe" criteria={criteria} onSort={toggleSort} />
+                    <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
                   </tr>
                 </thead>
                 <tbody>

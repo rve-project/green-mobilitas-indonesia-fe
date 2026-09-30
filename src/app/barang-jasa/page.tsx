@@ -10,12 +10,23 @@ import { hitungHargaPaket } from "@/lib/paket";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti, type SortCriterion } from "@/lib/useSort";
 import { TambahBarangModal } from "@/components/barang/TambahBarangModal";
 import { TambahJasaModal } from "@/components/barang/TambahJasaModal";
 import { TambahPaketModal } from "@/components/barang/TambahPaketModal";
 import { BarangDetailPanel, JasaDetailPanel, PaketDetailPanel } from "@/components/barang/DetailPanels";
 
 type Tab = "barang" | "jasa" | "paket";
+
+const AKTIF_ORDER: Record<"aktif" | "nonaktif", number> = {
+  nonaktif: 0,
+  aktif: 1,
+};
+
+type BarangSortKey = "kode" | "nama" | "kategori" | "brand" | "satuan" | "hargaJual" | "stok" | "status";
+type JasaSortKey = "kode" | "nama" | "kategori" | "jenis" | "harga" | "komisi";
+type PaketSortKey = "kode" | "nama" | "jumlahItem" | "hargaPaket" | "status";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "barang", label: "Barang" },
@@ -44,6 +55,10 @@ export default function BarangJasaPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportSummary | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const barangSort = useSort<BarangSortKey>("kode", "asc");
+  const jasaSort = useSort<JasaSortKey>("kode", "asc");
+  const paketSort = useSort<PaketSortKey>("kode", "asc");
 
   function changeTab(t: Tab) {
     setTab(t);
@@ -83,26 +98,82 @@ export default function BarangJasaPage() {
     }
   }
 
+  function barangSortValue(b: Barang, key: BarangSortKey): string | number {
+    switch (key) {
+      case "kode":
+        return b.kode;
+      case "nama":
+        return b.nama.toLowerCase();
+      case "kategori":
+        return b.kategori.toLowerCase();
+      case "brand":
+        return (b.brand ?? "").toLowerCase();
+      case "satuan":
+        return b.satuan.toLowerCase();
+      case "hargaJual":
+        return b.hargaJual;
+      case "stok":
+        return b.stok;
+      case "status":
+        return AKTIF_ORDER[b.aktif ? "aktif" : "nonaktif"];
+    }
+  }
+
+  function jasaSortValue(j: Jasa, key: JasaSortKey): string | number {
+    switch (key) {
+      case "kode":
+        return j.kode;
+      case "nama":
+        return j.nama.toLowerCase();
+      case "kategori":
+        return j.kategori.toLowerCase();
+      case "jenis":
+        return j.jenis.toLowerCase();
+      case "harga":
+        return j.harga;
+      case "komisi":
+        return j.komisi;
+    }
+  }
+
+  function paketSortValue(p: Paket, key: PaketSortKey): string | number {
+    switch (key) {
+      case "kode":
+        return p.kode;
+      case "nama":
+        return p.nama.toLowerCase();
+      case "jumlahItem":
+        return p.items.length;
+      case "hargaPaket":
+        return hitungHargaPaket(p.items, barang ?? [], jasa ?? []).hargaPaket;
+      case "status":
+        return AKTIF_ORDER[p.aktif ? "aktif" : "nonaktif"];
+    }
+  }
+
   const filteredBarang = useMemo(() => {
     if (!barang) return null;
     const q = search.trim().toLowerCase();
     const rows = q ? barang.filter((b) => b.kode.toLowerCase().includes(q) || b.nama.toLowerCase().includes(q)) : barang;
-    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [barang, search]);
+    return [...rows].sort((a, b) => compareMulti(a, b, barangSort.criteria, barangSortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barang, search, barangSort.criteria]);
 
   const filteredJasa = useMemo(() => {
     if (!jasa) return null;
     const q = search.trim().toLowerCase();
     const rows = q ? jasa.filter((j) => j.kode.toLowerCase().includes(q) || j.nama.toLowerCase().includes(q)) : jasa;
-    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [jasa, search]);
+    return [...rows].sort((a, b) => compareMulti(a, b, jasaSort.criteria, jasaSortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jasa, search, jasaSort.criteria]);
 
   const filteredPaket = useMemo(() => {
     if (!paket) return null;
     const q = search.trim().toLowerCase();
     const rows = q ? paket.filter((p) => p.kode.toLowerCase().includes(q) || p.nama.toLowerCase().includes(q)) : paket;
-    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [paket, search]);
+    return [...rows].sort((a, b) => compareMulti(a, b, paketSort.criteria, paketSortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paket, search, barang, jasa, paketSort.criteria]);
 
   return (
     <div className="flex-1 space-y-6 px-4 py-5 sm:px-8 sm:py-6">
@@ -180,24 +251,36 @@ export default function BarangJasaPage() {
           ))}
         </div>
 
-        <div className="relative mb-4 max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <input
-            value={search}
-            onChange={(e) => changeSearch(e.target.value)}
-            placeholder="Cari kode/nama..."
-            className="w-full rounded-lg border border-zinc-200 py-2 pl-9 pr-3 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="relative max-w-sm flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <input
+              value={search}
+              onChange={(e) => changeSearch(e.target.value)}
+              placeholder="Cari kode/nama..."
+              className="w-full rounded-lg border border-zinc-200 py-2 pl-9 pr-3 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+            />
+          </div>
+          {tab === "barang" && <SortResetButton visible={!barangSort.isDefault} onReset={barangSort.resetSort} />}
+          {tab === "jasa" && <SortResetButton visible={!jasaSort.isDefault} onReset={jasaSort.resetSort} />}
+          {tab === "paket" && <SortResetButton visible={!paketSort.isDefault} onReset={paketSort.resetSort} />}
         </div>
 
         {tab === "barang" && (
           <BarangTable
             data={filteredBarang ? paginate(filteredBarang, page, pageSize) : null}
             onRowClick={setDetailBarang}
+            criteria={barangSort.criteria}
+            onSort={barangSort.toggleSort}
           />
         )}
         {tab === "jasa" && (
-          <JasaTable data={filteredJasa ? paginate(filteredJasa, page, pageSize) : null} onRowClick={setDetailJasa} />
+          <JasaTable
+            data={filteredJasa ? paginate(filteredJasa, page, pageSize) : null}
+            onRowClick={setDetailJasa}
+            criteria={jasaSort.criteria}
+            onSort={jasaSort.toggleSort}
+          />
         )}
         {tab === "paket" && (
           <PaketTable
@@ -205,6 +288,8 @@ export default function BarangJasaPage() {
             barang={barang ?? []}
             jasa={jasa ?? []}
             onRowClick={setDetailPaket}
+            criteria={paketSort.criteria}
+            onSort={paketSort.toggleSort}
           />
         )}
 
@@ -399,7 +484,17 @@ function ImportResultModal({ summary, onClose }: { summary: ImportSummary; onClo
   );
 }
 
-function BarangTable({ data, onRowClick }: { data: Barang[] | null; onRowClick: (b: Barang) => void }) {
+function BarangTable({
+  data,
+  onRowClick,
+  criteria,
+  onSort,
+}: {
+  data: Barang[] | null;
+  onRowClick: (b: Barang) => void;
+  criteria: SortCriterion<BarangSortKey>[];
+  onSort: (key: BarangSortKey) => void;
+}) {
   if (!data) return <p className="text-sm text-zinc-400">Memuat…</p>;
   if (data.length === 0) return <EmptyState label="Belum ada data barang" />;
 
@@ -408,14 +503,20 @@ function BarangTable({ data, onRowClick }: { data: Barang[] | null; onRowClick: 
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-            <th className="py-2 pr-4 font-medium">Kode</th>
-            <th className="py-2 pr-4 font-medium">Nama Barang</th>
-            <th className="py-2 pr-4 font-medium">Kategori</th>
-            <th className="py-2 pr-4 font-medium">Brand</th>
-            <th className="py-2 pr-4 font-medium">Satuan</th>
-            <th className="py-2 pr-4 text-right font-medium">Harga Jual</th>
-            <th className="py-2 pr-4 text-right font-medium">Stok</th>
-            <th className="py-2 pr-0 font-medium">Status</th>
+            <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Nama Barang" sortKey="nama" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Kategori" sortKey="kategori" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Brand" sortKey="brand" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Satuan" sortKey="satuan" criteria={criteria} onSort={onSort} />
+            <SortableTh
+              label="Harga Jual"
+              sortKey="hargaJual"
+              criteria={criteria}
+              onSort={onSort}
+              align="right"
+            />
+            <SortableTh label="Stok" sortKey="stok" criteria={criteria} onSort={onSort} align="right" />
+            <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={onSort} />
           </tr>
         </thead>
         <tbody>
@@ -457,7 +558,17 @@ function BarangTable({ data, onRowClick }: { data: Barang[] | null; onRowClick: 
   );
 }
 
-function JasaTable({ data, onRowClick }: { data: Jasa[] | null; onRowClick: (j: Jasa) => void }) {
+function JasaTable({
+  data,
+  onRowClick,
+  criteria,
+  onSort,
+}: {
+  data: Jasa[] | null;
+  onRowClick: (j: Jasa) => void;
+  criteria: SortCriterion<JasaSortKey>[];
+  onSort: (key: JasaSortKey) => void;
+}) {
   if (!data) return <p className="text-sm text-zinc-400">Memuat…</p>;
   if (data.length === 0) return <EmptyState label="Belum ada data jasa" />;
 
@@ -466,12 +577,12 @@ function JasaTable({ data, onRowClick }: { data: Jasa[] | null; onRowClick: (j: 
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-            <th className="py-2 pr-4 font-medium">Kode</th>
-            <th className="py-2 pr-4 font-medium">Nama Jasa</th>
-            <th className="py-2 pr-4 font-medium">Kategori</th>
-            <th className="py-2 pr-4 font-medium">Jenis</th>
-            <th className="py-2 pr-4 text-right font-medium">Harga</th>
-            <th className="py-2 pr-0 text-right font-medium">Komisi</th>
+            <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Nama Jasa" sortKey="nama" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Kategori" sortKey="kategori" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Jenis" sortKey="jenis" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Harga" sortKey="harga" criteria={criteria} onSort={onSort} align="right" />
+            <SortableTh label="Komisi" sortKey="komisi" criteria={criteria} onSort={onSort} align="right" />
           </tr>
         </thead>
         <tbody>
@@ -500,11 +611,15 @@ function PaketTable({
   barang,
   jasa,
   onRowClick,
+  criteria,
+  onSort,
 }: {
   data: Paket[] | null;
   barang: Barang[];
   jasa: Jasa[];
   onRowClick: (p: Paket) => void;
+  criteria: SortCriterion<PaketSortKey>[];
+  onSort: (key: PaketSortKey) => void;
 }) {
   if (!data) return <p className="text-sm text-zinc-400">Memuat…</p>;
   if (data.length === 0) return <EmptyState label="Belum ada data paket" />;
@@ -518,11 +633,17 @@ function PaketTable({
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-            <th className="py-2 pr-4 font-medium">Kode</th>
-            <th className="py-2 pr-4 font-medium">Nama Paket</th>
-            <th className="py-2 pr-4 font-medium">Jumlah Item</th>
-            <th className="py-2 pr-4 text-right font-medium">Harga Paket</th>
-            <th className="py-2 pr-0 font-medium">Status</th>
+            <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Nama Paket" sortKey="nama" criteria={criteria} onSort={onSort} />
+            <SortableTh label="Jumlah Item" sortKey="jumlahItem" criteria={criteria} onSort={onSort} />
+            <SortableTh
+              label="Harga Paket"
+              sortKey="hargaPaket"
+              criteria={criteria}
+              onSort={onSort}
+              align="right"
+            />
+            <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={onSort} />
           </tr>
         </thead>
         <tbody>

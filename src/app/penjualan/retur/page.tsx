@@ -4,12 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { Package, Plus } from "lucide-react";
 import { api } from "@/lib/api";
-import { Invoice, Pelanggan, Retur } from "@/lib/types";
+import { Invoice, Pelanggan, Retur, StatusRetur } from "@/lib/types";
 import { formatDateLong, formatRupiah } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { BuatReturWizard } from "@/components/penjualan/BuatReturWizard";
+
+type SortKey = "kode" | "invoice" | "tanggal" | "alasan" | "status" | "total";
+
+const STATUS_ORDER: Record<NonNullable<StatusRetur>, number> = {
+  draft: 0,
+  ongoing: 1,
+  selesai: 2,
+};
 
 function StatusReturBadge({ status }: { status: Retur["status"] }) {
   const config = {
@@ -31,6 +41,7 @@ export default function ReturPenjualanPage() {
   const [creating, setCreating] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
   useEffect(() => {
     api.retur().then(setRetur);
@@ -42,10 +53,28 @@ export default function ReturPenjualanPage() {
     return invoice.find((i) => i.id === invoiceId)?.kode ?? "-";
   }
 
-  const sortedRetur = useMemo(
-    () => (retur ? [...retur].sort((a, b) => a.kode.localeCompare(b.kode)) : null),
-    [retur]
-  );
+  function sortValue(r: Retur, key: SortKey): string | number {
+    switch (key) {
+      case "kode":
+        return r.kode.toLowerCase();
+      case "invoice":
+        return kodeInvoice(r.invoiceId).toLowerCase();
+      case "tanggal":
+        return new Date(r.tanggal).getTime();
+      case "alasan":
+        return (r.alasan ?? "").toLowerCase();
+      case "status":
+        return STATUS_ORDER[r.status ?? "selesai"];
+      case "total":
+        return r.total;
+    }
+  }
+
+  const sortedRetur = useMemo(() => {
+    if (!retur) return null;
+    return [...retur].sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [retur, invoice, criteria]);
 
   if (creating) {
     return (
@@ -77,7 +106,7 @@ export default function ReturPenjualanPage() {
         }
       />
 
-      <Panel title="Daftar Retur Penjualan">
+      <Panel title="Daftar Retur Penjualan" action={<SortResetButton visible={!isDefault} onReset={resetSort} />}>
         {!sortedRetur ? (
           <p className="text-sm text-zinc-400">Memuat…</p>
         ) : sortedRetur.length === 0 ? (
@@ -91,12 +120,18 @@ export default function ReturPenjualanPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-4 font-medium">Kode</th>
-                  <th className="py-2 pr-4 font-medium">Invoice</th>
-                  <th className="py-2 pr-4 font-medium">Tanggal</th>
-                  <th className="py-2 pr-4 font-medium">Alasan</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-0 text-right font-medium">Total</th>
+                  <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Invoice" sortKey="invoice" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Tanggal" sortKey="tanggal" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Alasan" sortKey="alasan" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh
+                    label="Total"
+                    sortKey="total"
+                    criteria={criteria}
+                    onSort={toggleSort}
+                    align="right"
+                  />
                 </tr>
               </thead>
               <tbody>

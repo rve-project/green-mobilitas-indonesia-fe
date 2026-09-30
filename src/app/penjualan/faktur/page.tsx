@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ChevronDown, ChevronUp, ChevronsUpDown, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { Invoice, Kendaraan, Pelanggan, StatusInvoice } from "@/lib/types";
 import { formatDateLong, formatRupiah, withinLastDays } from "@/lib/format";
@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { DetailInvoiceModal } from "@/components/penjualan/DetailInvoiceModal";
 
 const TABS: { key: StatusInvoice; label: string }[] = [
@@ -72,49 +74,6 @@ type SortKey =
   | "total"
   | "statusPekerjaan"
   | "statusPembayaran";
-type SortDir = "asc" | "desc";
-
-function SortableTh({
-  label,
-  sortKey,
-  activeKey,
-  dir,
-  onSort,
-  align,
-}: {
-  label: string;
-  sortKey: SortKey;
-  activeKey: SortKey;
-  dir: SortDir;
-  onSort: (key: SortKey) => void;
-  align?: "right";
-}) {
-  const active = activeKey === sortKey;
-  return (
-    <th className={clsx("py-2 font-medium", align === "right" ? "pr-4 text-right" : "pr-4")}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        className={clsx(
-          "inline-flex w-full items-center gap-1 hover:text-zinc-700",
-          align === "right" && "justify-end",
-          active && "text-zinc-700"
-        )}
-      >
-        {label}
-        {active ? (
-          dir === "asc" ? (
-            <ChevronUp className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronDown className="h-3.5 w-3.5" />
-          )
-        ) : (
-          <ChevronsUpDown className="h-3.5 w-3.5 text-zinc-300" />
-        )}
-      </button>
-    </th>
-  );
-}
 
 export default function FakturPenjualanPage() {
   const router = useRouter();
@@ -127,18 +86,7 @@ export default function FakturPenjualanPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("kode");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-    setPage(1);
-  }
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
   async function handleStatusPekerjaanChange(id: string, value: "selesai" | "belum_selesai") {
     const previous = invoice?.find((inv) => inv.id === id)?.statusPekerjaan;
@@ -215,14 +163,9 @@ export default function FakturPenjualanPage() {
           kendaraanInv.some((k) => k.platNomor.toLowerCase().includes(q))
         );
       })
-      .sort((a, b) => {
-        const va = sortValue(a, sortKey);
-        const vb = sortValue(b, sortKey);
-        const cmp = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb));
-        return sortDir === "asc" ? cmp : -cmp;
-      });
+      .sort((a, b) => compareMulti(a, b, criteria, sortValue));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoice, tab, search, periodDays, kendaraan, pelangganMap, sortKey, sortDir]);
+  }, [invoice, tab, search, periodDays, kendaraan, pelangganMap, criteria]);
 
   const summary = useMemo(() => {
     const scoped = invoice?.filter((inv) => inv.status === tab && withinLastDays(inv.tanggal, periodDays)) ?? [];
@@ -296,6 +239,9 @@ export default function FakturPenjualanPage() {
               className="w-44"
               options={PERIOD_OPTIONS.map((opt) => ({ value: String(opt.value), label: opt.label }))}
             />
+            <div className="flex items-center">
+              <SortResetButton visible={!isDefault} onReset={resetSort} />
+            </div>
           </div>
         </div>
 
@@ -327,33 +273,14 @@ export default function FakturPenjualanPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <SortableTh label="Kode" sortKey="kode" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Customer" sortKey="customer" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Kendaraan" sortKey="kendaraan" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Plat Nomor" sortKey="plat" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Tgl Penjualan" sortKey="tanggal" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <SortableTh
-                    label="Total"
-                    sortKey="total"
-                    activeKey={sortKey}
-                    dir={sortDir}
-                    onSort={handleSort}
-                    align="right"
-                  />
-                  <SortableTh
-                    label="Status Pekerjaan"
-                    sortKey="statusPekerjaan"
-                    activeKey={sortKey}
-                    dir={sortDir}
-                    onSort={handleSort}
-                  />
-                  <SortableTh
-                    label="Pembayaran"
-                    sortKey="statusPembayaran"
-                    activeKey={sortKey}
-                    dir={sortDir}
-                    onSort={handleSort}
-                  />
+                  <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Customer" sortKey="customer" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Kendaraan" sortKey="kendaraan" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Plat Nomor" sortKey="plat" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Tgl Penjualan" sortKey="tanggal" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Total" sortKey="total" criteria={criteria} onSort={toggleSort} align="right" />
+                  <SortableTh label="Status Pekerjaan" sortKey="statusPekerjaan" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Pembayaran" sortKey="statusPembayaran" criteria={criteria} onSort={toggleSort} />
                 </tr>
               </thead>
               <tbody>

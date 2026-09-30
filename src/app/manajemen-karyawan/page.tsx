@@ -6,12 +6,14 @@ import clsx from "clsx";
 import { CheckCircle2, FileText, Pencil, Plus, Search, Trash2, Users, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
-import { Karyawan, KaryawanStats, PeriodeGaji, Posisi } from "@/lib/types";
+import { Karyawan, KaryawanStats, PeriodeGaji, Posisi, StatusKaryawan } from "@/lib/types";
 import { formatDate, formatRupiah } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { TambahKaryawanModal } from "@/components/karyawan/TambahKaryawanModal";
 import { TambahPosisiModal } from "@/components/karyawan/TambahPosisiModal";
 import { BuatPeriodeGajiModal } from "@/components/karyawan/BuatPeriodeGajiModal";
@@ -126,14 +128,39 @@ function KaryawanBaruButton({
   );
 }
 
+type KaryawanSortKey = "kode" | "nama" | "kontak" | "posisi" | "tanggalMasuk" | "status";
+
+const STATUS_KARYAWAN_ORDER: Record<StatusKaryawan, number> = {
+  aktif: 0,
+  nonaktif: 1,
+};
+
 function KaryawanTab({ karyawan, posisi }: { karyawan: Karyawan[] | null; posisi: Posisi[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [posisiFilter, setPosisiFilter] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<KaryawanSortKey>("kode", "asc");
 
   const posisiMap = useMemo(() => new Map(posisi.map((p) => [p.id, p.nama])), [posisi]);
+
+  function sortValue(k: Karyawan, key: KaryawanSortKey): string | number {
+    switch (key) {
+      case "kode":
+        return k.kode.toLowerCase();
+      case "nama":
+        return k.nama.toLowerCase();
+      case "kontak":
+        return (k.telepon || k.email || "").toLowerCase();
+      case "posisi":
+        return (k.posisiId ? posisiMap.get(k.posisiId) ?? "" : "").toLowerCase();
+      case "tanggalMasuk":
+        return new Date(k.tanggalMasuk).getTime();
+      case "status":
+        return STATUS_KARYAWAN_ORDER[k.status];
+    }
+  }
 
   const stats: KaryawanStats | null = useMemo(() => {
     if (!karyawan) return null;
@@ -158,8 +185,9 @@ function KaryawanTab({ karyawan, posisi }: { karyawan: Karyawan[] | null; posisi
         const matchesPosisi = !posisiFilter || k.posisiId === posisiFilter;
         return matchesSearch && matchesPosisi;
       })
-      .sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [karyawan, search, posisiFilter]);
+      .sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [karyawan, search, posisiFilter, posisiMap, criteria]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;
 
@@ -219,6 +247,10 @@ function KaryawanTab({ karyawan, posisi }: { karyawan: Karyawan[] | null; posisi
         </div>
       </div>
 
+      <div className="flex justify-end">
+        <SortResetButton visible={!isDefault} onReset={resetSort} />
+      </div>
+
       {!paged ? (
         <p className="text-sm text-zinc-400">Memuat…</p>
       ) : paged.length === 0 ? (
@@ -228,12 +260,12 @@ function KaryawanTab({ karyawan, posisi }: { karyawan: Karyawan[] | null; posisi
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                <th className="py-2 pr-4 font-medium">Kode Karyawan</th>
-                <th className="py-2 pr-4 font-medium">Nama Karyawan</th>
-                <th className="py-2 pr-4 font-medium">Kontak</th>
-                <th className="py-2 pr-4 font-medium">Posisi</th>
-                <th className="py-2 pr-4 font-medium">Tanggal Masuk</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
+                <SortableTh label="Kode Karyawan" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Nama Karyawan" sortKey="nama" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Kontak" sortKey="kontak" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Posisi" sortKey="posisi" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Tanggal Masuk" sortKey="tanggalMasuk" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody>
@@ -365,18 +397,35 @@ function GajiKomisiTab({
   );
 }
 
+type PosisiSortKey = "kode" | "nama" | "deskripsi" | "status";
+
 function PosisiTab({ posisi, onChanged }: { posisi: Posisi[] | null; onChanged: () => void }) {
   const [search, setSearch] = useState("");
   const [modalState, setModalState] = useState<{ open: boolean; edit?: Posisi }>({ open: false });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<PosisiSortKey>("kode", "asc");
+
+  function sortValue(p: Posisi, key: PosisiSortKey): string | number {
+    switch (key) {
+      case "kode":
+        return p.kode.toLowerCase();
+      case "nama":
+        return p.nama.toLowerCase();
+      case "deskripsi":
+        return (p.deskripsi ?? "").toLowerCase();
+      case "status":
+        return p.aktif ? 0 : 1;
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!posisi) return null;
     const q = search.trim().toLowerCase();
     const rows = q ? posisi.filter((p) => p.nama.toLowerCase().includes(q) || p.kode.toLowerCase().includes(q)) : posisi;
-    return [...rows].sort((a, b) => a.kode.localeCompare(b.kode));
-  }, [posisi, search]);
+    return [...rows].sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posisi, search, criteria]);
 
   const paged = filtered ? paginate(filtered, page, pageSize) : null;
 
@@ -416,6 +465,10 @@ function PosisiTab({ posisi, onChanged }: { posisi: Posisi[] | null; onChanged: 
         />
       </div>
 
+      <div className="mb-2 flex justify-end">
+        <SortResetButton visible={!isDefault} onReset={resetSort} />
+      </div>
+
       {!filtered ? (
         <p className="text-sm text-zinc-400">Memuat…</p>
       ) : filtered.length === 0 ? (
@@ -425,10 +478,10 @@ function PosisiTab({ posisi, onChanged }: { posisi: Posisi[] | null; onChanged: 
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                <th className="py-2 pr-4 font-medium">Kode</th>
-                <th className="py-2 pr-4 font-medium">Nama Posisi</th>
-                <th className="py-2 pr-4 font-medium">Deskripsi</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
+                <SortableTh label="Kode" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Nama Posisi" sortKey="nama" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Deskripsi" sortKey="deskripsi" criteria={criteria} onSort={toggleSort} />
+                <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
                 <th className="py-2 pr-0 text-right font-medium">Aksi</th>
               </tr>
             </thead>

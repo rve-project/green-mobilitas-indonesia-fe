@@ -10,9 +10,23 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { RupiahInput } from "@/components/ui/RupiahInput";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { compareMulti, useSort } from "@/lib/useSort";
 
 type MainTab = "daftar" | "riwayat";
 type SubTab = "semua" | "jatuh_tempo" | "akan_jatuh_tempo";
+
+type TransaksiSortKey =
+  | "kode"
+  | "tipe"
+  | "tanggal"
+  | "jatuhTempo"
+  | "total"
+  | "sisa"
+  | "status"
+  | "statusTransaksi";
+
+type RiwayatSortKey = "kode" | "nama" | "tanggal" | "jumlah";
 
 const STATUS_PEMBAYARAN_CONFIG: Record<Pembelian["statusPembayaran"], { label: string; className: string }> = {
   lunas: { label: "Lunas", className: "bg-emerald-50 text-emerald-600" },
@@ -20,10 +34,22 @@ const STATUS_PEMBAYARAN_CONFIG: Record<Pembelian["statusPembayaran"], { label: s
   dibayar_setengah: { label: "Dibayar Setengah", className: "bg-amber-50 text-amber-600" },
 };
 
+const STATUS_PEMBAYARAN_ORDER: Record<Pembelian["statusPembayaran"], number> = {
+  belum_dibayar: 0,
+  dibayar_setengah: 1,
+  lunas: 2,
+};
+
 const STATUS_PEMBELIAN_CONFIG: Record<Pembelian["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "bg-zinc-100 text-zinc-600" },
   selesai: { label: "Selesai", className: "bg-emerald-50 text-emerald-600" },
   dibatalkan: { label: "Dibatalkan", className: "bg-red-50 text-red-500" },
+};
+
+const STATUS_PEMBELIAN_ORDER: Record<Pembelian["status"], number> = {
+  draft: 0,
+  selesai: 1,
+  dibatalkan: 2,
 };
 
 function pembelianNet(p: Pembelian): number {
@@ -36,6 +62,27 @@ function pembelianBucket(p: Pembelian): "lewat" | "segera" | "aman" {
   if (d < 0) return "lewat";
   if (d <= 7) return "segera";
   return "aman";
+}
+
+function transaksiSortValue(p: Pembelian, tipe: string, key: TransaksiSortKey): string | number {
+  switch (key) {
+    case "kode":
+      return p.kode;
+    case "tipe":
+      return tipe.toLowerCase();
+    case "tanggal":
+      return new Date(p.tanggal).getTime();
+    case "jatuhTempo":
+      return p.jatuhTempo ? new Date(p.jatuhTempo).getTime() : 0;
+    case "total":
+      return pembelianNet(p);
+    case "sisa":
+      return pembelianNet(p) - p.dibayar;
+    case "status":
+      return STATUS_PEMBAYARAN_ORDER[p.statusPembayaran];
+    case "statusTransaksi":
+      return STATUS_PEMBELIAN_ORDER[p.status];
+  }
 }
 
 export default function HutangPage() {
@@ -52,6 +99,12 @@ export default function HutangPage() {
   const [payingAll, setPayingAll] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const {
+    criteria: transaksiCriteria,
+    toggleSort: transaksiToggleSort,
+    resetSort: transaksiResetSort,
+    isDefault: transaksiIsDefault,
+  } = useSort<TransaksiSortKey>("kode", "asc");
 
   function reloadTransaksi() {
     api.pembelian().then(setPembelian);
@@ -303,34 +356,93 @@ export default function HutangPage() {
                             <p className="text-sm font-semibold text-zinc-700">
                               Transaksi Pembelian ({row.pembelianHutang.length})
                             </p>
-                            <button
-                              type="button"
-                              disabled={payingAll === row.supplier.id}
-                              onClick={() => bayarSekaligus(row.supplier.id, row.pembelianHutang)}
-                              className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700 disabled:opacity-60"
-                            >
-                              <CreditCard className="h-3.5 w-3.5" />
-                              {payingAll === row.supplier.id ? "Memproses..." : "Bayar Sekaligus"}
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <SortResetButton visible={!transaksiIsDefault} onReset={transaksiResetSort} />
+                              <button
+                                type="button"
+                                disabled={payingAll === row.supplier.id}
+                                onClick={() => bayarSekaligus(row.supplier.id, row.pembelianHutang)}
+                                className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700 disabled:opacity-60"
+                              >
+                                <CreditCard className="h-3.5 w-3.5" />
+                                {payingAll === row.supplier.id ? "Memproses..." : "Bayar Sekaligus"}
+                              </button>
+                            </div>
                           </div>
 
                           <div className="overflow-x-auto rounded-lg border border-zinc-100">
                             <table className="w-full text-left text-sm">
                               <thead>
                                 <tr className="bg-green-600 text-xs uppercase tracking-wide text-white">
-                                  <th className="px-3 py-2 font-semibold">Kode</th>
-                                  <th className="px-3 py-2 font-semibold">Tipe</th>
-                                  <th className="px-3 py-2 font-semibold">Tanggal</th>
-                                  <th className="px-3 py-2 font-semibold">Jatuh Tempo</th>
-                                  <th className="px-3 py-2 text-right font-semibold">Total</th>
-                                  <th className="px-3 py-2 text-right font-semibold">Terbayar / Sisa</th>
-                                  <th className="px-3 py-2 font-semibold">Status</th>
-                                  <th className="px-3 py-2 font-semibold">Status Transaksi</th>
+                                  <SortableTh
+                                    label="Kode"
+                                    sortKey="kode"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    className="px-3"
+                                  />
+                                  <SortableTh
+                                    label="Tipe"
+                                    sortKey="tipe"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    className="px-3"
+                                  />
+                                  <SortableTh
+                                    label="Tanggal"
+                                    sortKey="tanggal"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    className="px-3"
+                                  />
+                                  <SortableTh
+                                    label="Jatuh Tempo"
+                                    sortKey="jatuhTempo"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    className="px-3"
+                                  />
+                                  <SortableTh
+                                    label="Total"
+                                    sortKey="total"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    align="right"
+                                    className="px-3"
+                                  />
+                                  <SortableTh
+                                    label="Terbayar / Sisa"
+                                    sortKey="sisa"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    align="right"
+                                    className="px-3"
+                                  />
+                                  <SortableTh
+                                    label="Status"
+                                    sortKey="status"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    className="px-3"
+                                  />
+                                  <SortableTh
+                                    label="Status Transaksi"
+                                    sortKey="statusTransaksi"
+                                    criteria={transaksiCriteria}
+                                    onSort={transaksiToggleSort}
+                                    className="px-3"
+                                  />
                                   <th className="px-3 py-2" />
                                 </tr>
                               </thead>
                               <tbody>
-                                {row.pembelianHutang.map((p) => {
+                                {[...row.pembelianHutang]
+                                  .sort((a, b) =>
+                                    compareMulti(a, b, transaksiCriteria, (item, key) =>
+                                      transaksiSortValue(item, row.supplier.tipe, key)
+                                    )
+                                  )
+                                  .map((p) => {
                                   const sisa = pembelianNet(p) - p.dibayar;
                                   const bucket = pembelianBucket(p);
                                   const d = p.jatuhTempo ? daysBetween(p.jatuhTempo) : null;
@@ -486,35 +598,59 @@ function RiwayatPembayaran({
 }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<RiwayatSortKey>("tanggal", "desc");
+
+  const rows = useMemo(
+    () =>
+      pembayaran.map((p) => {
+        const pb = pembelian.find((i) => i.id === p.pembelianId);
+        const namaSupplier = pb ? supplier.find((s) => s.id === pb.supplierId)?.nama : undefined;
+        return { p, pb, namaSupplier };
+      }),
+    [pembayaran, pembelian, supplier]
+  );
+
+  const sorted = useMemo(() => {
+    function sortValue(item: (typeof rows)[number], key: RiwayatSortKey): string | number {
+      switch (key) {
+        case "kode":
+          return (item.pb?.kode ?? "").toLowerCase();
+        case "nama":
+          return (item.namaSupplier ?? "").toLowerCase();
+        case "tanggal":
+          return new Date(item.p.tanggal).getTime();
+        case "jumlah":
+          return item.p.jumlah;
+      }
+    }
+    return [...rows].sort((a, b) => compareMulti(a, b, criteria, sortValue));
+  }, [rows, criteria]);
 
   if (pembayaran.length === 0) return <EmptyState label="Belum ada riwayat pembayaran" />;
 
-  const sorted = [...pembayaran].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
-
   return (
     <div className="overflow-x-auto">
+      <div className="mb-2 flex items-center justify-end">
+        <SortResetButton visible={!isDefault} onReset={resetSort} />
+      </div>
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-            <th className="py-2 pr-4 font-medium">Pembelian</th>
-            <th className="py-2 pr-4 font-medium">Supplier</th>
-            <th className="py-2 pr-4 font-medium">Tanggal</th>
-            <th className="py-2 pr-0 text-right font-medium">Jumlah</th>
+            <SortableTh label="Pembelian" sortKey="kode" criteria={criteria} onSort={toggleSort} />
+            <SortableTh label="Supplier" sortKey="nama" criteria={criteria} onSort={toggleSort} />
+            <SortableTh label="Tanggal" sortKey="tanggal" criteria={criteria} onSort={toggleSort} />
+            <SortableTh label="Jumlah" sortKey="jumlah" criteria={criteria} onSort={toggleSort} align="right" />
           </tr>
         </thead>
         <tbody>
-          {paginate(sorted, page, pageSize).map((p) => {
-            const pb = pembelian.find((i) => i.id === p.pembelianId);
-            const namaSupplier = pb ? supplier.find((s) => s.id === pb.supplierId)?.nama : undefined;
-            return (
-              <tr key={p.id} className="border-b border-zinc-50 last:border-0">
-                <td className="py-3 pr-4 font-semibold text-green-600">{pb?.kode ?? "-"}</td>
-                <td className="py-3 pr-4 text-zinc-700">{namaSupplier ?? "-"}</td>
-                <td className="py-3 pr-4 text-zinc-500">{formatDateLong(p.tanggal)}</td>
-                <td className="py-3 pr-0 text-right font-semibold text-zinc-900">{formatRupiah(p.jumlah)}</td>
-              </tr>
-            );
-          })}
+          {paginate(sorted, page, pageSize).map(({ p, pb, namaSupplier }) => (
+            <tr key={p.id} className="border-b border-zinc-50 last:border-0">
+              <td className="py-3 pr-4 font-semibold text-green-600">{pb?.kode ?? "-"}</td>
+              <td className="py-3 pr-4 text-zinc-700">{namaSupplier ?? "-"}</td>
+              <td className="py-3 pr-4 text-zinc-500">{formatDateLong(p.tanggal)}</td>
+              <td className="py-3 pr-0 text-right font-semibold text-zinc-900">{formatRupiah(p.jumlah)}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
       <Pagination

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -8,16 +8,26 @@ import { confirmDelete } from "@/lib/confirm";
 import { Lokasi, TIPE_LOKASI_OPTIONS } from "@/lib/types";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/Panel";
+import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
+import { useSort, compareMulti } from "@/lib/useSort";
 import { TambahLokasiModal } from "@/components/lokasi/TambahLokasiModal";
 
 function tipeLabel(tipe: Lokasi["tipe"]) {
   return TIPE_LOKASI_OPTIONS.find((o) => o.value === tipe)?.label ?? tipe;
 }
 
+const STATUS_LOKASI_ORDER: Record<Lokasi["status"], number> = {
+  nonaktif: 0,
+  aktif: 1,
+};
+
+type SortKey = "nama" | "tipe" | "alamat" | "kota" | "telepon" | "status";
+
 export default function LokasiPage() {
   const [lokasiList, setLokasiList] = useState<Lokasi[] | null>(null);
   const [modalState, setModalState] = useState<{ open: boolean; edit?: Lokasi }>({ open: false });
   const [error, setError] = useState<string | null>(null);
+  const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("nama", "asc");
 
   function refresh() {
     api.lokasi().then(setLokasiList).catch(() => setLokasiList([]));
@@ -26,6 +36,29 @@ export default function LokasiPage() {
   useEffect(() => {
     refresh();
   }, []);
+
+  function sortValue(l: Lokasi, key: SortKey): string | number {
+    switch (key) {
+      case "nama":
+        return l.nama.toLowerCase();
+      case "tipe":
+        return tipeLabel(l.tipe).toLowerCase();
+      case "alamat":
+        return l.alamat.toLowerCase();
+      case "kota":
+        return l.kota.toLowerCase();
+      case "telepon":
+        return l.telepon.toLowerCase();
+      case "status":
+        return STATUS_LOKASI_ORDER[l.status];
+    }
+  }
+
+  const sortedLokasi = useMemo(() => {
+    if (!lokasiList) return null;
+    return [...lokasiList].sort((a, b) => compareMulti(a, b, criteria, sortValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lokasiList, criteria]);
 
   async function handleDelete(item: Lokasi) {
     if (!(await confirmDelete(`Hapus lokasi "${item.nama}"?`))) return;
@@ -63,21 +96,25 @@ export default function LokasiPage() {
         ) : lokasiList.length === 0 ? (
           <EmptyState label="Belum ada data lokasi" />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="mb-3 flex justify-end">
+              <SortResetButton visible={!isDefault} onReset={resetSort} />
+            </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-4 font-medium">Nama</th>
-                  <th className="py-2 pr-4 font-medium">Tipe</th>
-                  <th className="py-2 pr-4 font-medium">Alamat</th>
-                  <th className="py-2 pr-4 font-medium">Kota</th>
-                  <th className="py-2 pr-4 font-medium">Telepon</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
+                  <SortableTh label="Nama" sortKey="nama" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Tipe" sortKey="tipe" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Alamat" sortKey="alamat" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Kota" sortKey="kota" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Telepon" sortKey="telepon" criteria={criteria} onSort={toggleSort} />
+                  <SortableTh label="Status" sortKey="status" criteria={criteria} onSort={toggleSort} />
                   <th className="py-2 pr-0 text-right font-medium">Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {lokasiList.map((l) => (
+                {(sortedLokasi ?? []).map((l) => (
                   <tr key={l.id} className="border-b border-zinc-50 last:border-0">
                     <td className="py-3 pr-4 font-medium text-zinc-900">{l.nama}</td>
                     <td className="py-3 pr-4 text-zinc-500">{tipeLabel(l.tipe)}</td>
@@ -118,7 +155,8 @@ export default function LokasiPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
