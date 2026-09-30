@@ -486,13 +486,19 @@ function DotMatrixDocument({
           </div>
 
           <p className="mt-2 font-bold">KETERANGAN</p>
-          <div className="min-h-16 space-y-0.5 border border-black p-2 text-[10px]">
+          <div className="min-h-16 space-y-0.5 border border-black p-2 text-[10px] leading-snug">
             {invoice.metodePembayaran && (
               <p>
                 <span className="font-semibold">Cara Bayar</span>: {invoice.metodePembayaran}
               </p>
             )}
             {invoice.catatan && <p>{invoice.catatan}</p>}
+            <p className="mt-1 font-semibold">*Catatan:</p>
+            <p>- Harap cantumkan nomor invoice ({invoice.kode}) pada berita transfer.</p>
+            <p>
+              - Kirimkan bukti transfer ke WhatsApp {profile.telepon || "-"} atau email {profile.email || "-"}.
+            </p>
+            <p className="mt-1">Terima kasih atas kerja samanya!</p>
           </div>
         </>
       )}
