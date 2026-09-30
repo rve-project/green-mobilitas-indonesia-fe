@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { PemasukanLain } from "@/lib/types";
 import { RupiahInput } from "@/components/ui/RupiahInput";
 import { DateInput } from "@/components/ui/DateInput";
+import { LookupSearchSelectField } from "@/components/ui/LookupSearchSelectField";
 
 interface TambahPemasukanLainModalProps {
   onClose: () => void;
@@ -62,12 +63,13 @@ export function TambahPemasukanLainModal({ onClose, onCreated }: TambahPemasukan
               <span className="mb-1.5 block text-sm font-medium text-zinc-700">
                 Kategori <span className="text-red-500">*</span>
               </span>
-              <input
-                required
+              <LookupSearchSelectField
+                tipe="kategori-pemasukan"
+                label="Kategori Pemasukan"
                 value={kategori}
-                onChange={(e) => setKategori(e.target.value)}
-                placeholder="cth. Penjualan Kardus, Pendapatan Sewa"
-                className={inputClass}
+                onChange={setKategori}
+                placeholder="Cari kategori pemasukan..."
+                required
               />
             </label>
 

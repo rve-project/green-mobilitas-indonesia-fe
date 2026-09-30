@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { PengeluaranLain } from "@/lib/types";
 import { RupiahInput } from "@/components/ui/RupiahInput";
 import { DateInput } from "@/components/ui/DateInput";
+import { LookupSearchSelectField } from "@/components/ui/LookupSearchSelectField";
 
 interface TambahPengeluaranLainModalProps {
   onClose: () => void;
@@ -62,12 +63,13 @@ export function TambahPengeluaranLainModal({ onClose, onCreated }: TambahPengelu
               <span className="mb-1.5 block text-sm font-medium text-zinc-700">
                 Kategori <span className="text-red-500">*</span>
               </span>
-              <input
-                required
+              <LookupSearchSelectField
+                tipe="kategori-pengeluaran"
+                label="Kategori Pengeluaran"
                 value={kategori}
-                onChange={(e) => setKategori(e.target.value)}
-                placeholder="cth. Biaya Angkut, Sewa Gudang"
-                className={inputClass}
+                onChange={setKategori}
+                placeholder="Cari kategori pengeluaran..."
+                required
               />
             </label>
 
