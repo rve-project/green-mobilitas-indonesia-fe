@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
 import { CheckCircle2, Plus, Search, Users, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
@@ -22,7 +22,6 @@ const STATUS_ORDER: Record<Pelanggan["status"], number> = {
 };
 
 export default function PelangganPage() {
-  const router = useRouter();
   const [pelanggan, setPelanggan] = useState<Pelanggan[] | null>(null);
   const [stats, setStats] = useState<PelangganStats | null>(null);
   const [search, setSearch] = useState("");
@@ -171,10 +170,12 @@ export default function PelangganPage() {
                   {paged.map((p) => (
                     <tr
                       key={p.id}
-                      onClick={() => router.push(`/pelanggan/${p.id}`)}
-                      className="cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
+                      className="relative cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
                     >
-                      <td className="py-3 pr-4 font-medium text-zinc-900">{p.kode}</td>
+                      <td className="py-3 pr-4 font-medium text-zinc-900">
+                        <Link href={`/pelanggan/${p.id}`} className="absolute inset-0" aria-label={`Lihat detail ${p.nama}`} />
+                        {p.kode}
+                      </td>
                       <td className="py-3 pr-4 text-zinc-700">{p.nama}</td>
                       <td className="py-3 pr-4 text-zinc-500">{p.email}</td>
                       <td className="py-3 pr-4 text-zinc-500">{p.telepon}</td>

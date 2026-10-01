@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
-import { ArrowLeft, Ban, CheckCircle2, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, Pencil, Printer, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
 import { Invoice, Kendaraan, Pelanggan } from "@/lib/types";
@@ -15,10 +15,9 @@ import { Pagination, paginate } from "@/components/ui/Pagination";
 import { TambahPelangganModal } from "@/components/pelanggan/TambahPelangganModal";
 import { TambahKendaraanModal } from "@/components/pelanggan/TambahKendaraanModal";
 
-const STATUS_INVOICE_CONFIG: Record<Invoice["status"], { label: string; className: string }> = {
-  draft: { label: "Proses", className: "bg-amber-50 text-amber-600" },
+const STATUS_PEKERJAAN_CONFIG: Record<NonNullable<Invoice["statusPekerjaan"]>, { label: string; className: string }> = {
   selesai: { label: "Selesai", className: "bg-emerald-50 text-emerald-600" },
-  dibatalkan: { label: "Dibatalkan", className: "bg-red-50 text-red-500" },
+  belum_selesai: { label: "Belum Selesai", className: "bg-amber-50 text-amber-600" },
 };
 
 const STATUS_PEMBAYARAN_CONFIG: Record<Invoice["statusPembayaran"], { label: string; className: string }> = {
@@ -66,6 +65,16 @@ export default function PelangganDetailPage() {
         .sort((a, b) => a.kode.localeCompare(b.kode)),
     [invoice, id]
   );
+  const kendaraanLabel = (inv: Invoice) =>
+    kendaraan
+      .filter((k) => inv.kendaraanIds?.includes(k.id))
+      .map((k) => `${k.merk} ${k.model}`)
+      .join(", ");
+  const platLabel = (inv: Invoice) =>
+    kendaraan
+      .filter((k) => inv.kendaraanIds?.includes(k.id))
+      .map((k) => k.platNomor)
+      .join(", ");
 
   const ringkasan = useMemo(() => {
     const totalJumlah = invoiceMilik.reduce((sum, inv) => sum + inv.total, 0);
@@ -251,7 +260,18 @@ export default function PelangganDetailPage() {
         )}
       </Section>
 
-      <Section title="Ringkasan Pembelian">
+      <Section
+        title="Ringkasan Pembelian"
+        action={
+          <Link
+            href={`/pelanggan/${pelanggan.id}/cetak`}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            Cetak
+          </Link>
+        }
+      >
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <SummaryStat label="Total Transaksi" value={String(ringkasan.totalTransaksi)} />
           <SummaryStat label="Total Jumlah" value={formatRupiah(ringkasan.totalJumlah)} />
@@ -265,22 +285,44 @@ export default function PelangganDetailPage() {
           <EmptyState label="Belum ada transaksi" />
         ) : (
           <>
-            <div className="divide-y divide-zinc-100 rounded-lg border border-zinc-100">
-              {riwayatPaged.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold text-green-600">{inv.kode}</p>
-                    <p className="text-xs text-zinc-400">{formatDateLong(inv.tanggal)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Pill {...STATUS_INVOICE_CONFIG[inv.status]} />
-                    <Pill {...STATUS_PEMBAYARAN_CONFIG[inv.statusPembayaran]} />
-                    <span className="w-28 text-right text-sm font-semibold text-zinc-900">
-                      {formatRupiah(inv.total)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-lg border border-zinc-100">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-400">
+                    <th className="px-4 py-2 font-medium">Kode</th>
+                    <th className="px-4 py-2 font-medium">Kendaraan</th>
+                    <th className="px-4 py-2 font-medium">Plat Nomor</th>
+                    <th className="px-4 py-2 font-medium">Tgl Penjualan</th>
+                    <th className="px-4 py-2 text-right font-medium">Total</th>
+                    <th className="px-4 py-2 font-medium">Status Pengerjaan</th>
+                    <th className="px-4 py-2 font-medium">Pembayaran</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {riwayatPaged.map((inv) => (
+                    <tr key={inv.id} className="relative hover:bg-zinc-50">
+                      <td className="px-4 py-3 font-semibold text-green-600">
+                        <Link
+                          href={`/penjualan/faktur/${inv.id}`}
+                          className="absolute inset-0"
+                          aria-label={`Lihat detail ${inv.kode}`}
+                        />
+                        {inv.kode}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-700">{kendaraanLabel(inv) || "-"}</td>
+                      <td className="px-4 py-3 text-zinc-700">{platLabel(inv) || "-"}</td>
+                      <td className="px-4 py-3 text-zinc-500">{formatDateLong(inv.tanggal)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatRupiah(inv.total)}</td>
+                      <td className="px-4 py-3">
+                        <Pill {...STATUS_PEKERJAAN_CONFIG[inv.statusPekerjaan ?? "selesai"]} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Pill {...STATUS_PEMBAYARAN_CONFIG[inv.statusPembayaran]} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             <Pagination
               page={riwayatPage}

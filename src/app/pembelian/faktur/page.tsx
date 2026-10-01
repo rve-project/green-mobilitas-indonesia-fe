@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
 import { Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
@@ -70,6 +71,8 @@ function PembayaranBadge({ status }: { status: Pembelian["statusPembayaran"] }) 
 
 export default function FakturPembelianPage() {
   const router = useRouter();
+  const params = useParams<{ id?: string }>();
+  const selectedId = params?.id ?? null;
   const [pembelian, setPembelian] = useState<Pembelian[] | null>(null);
   const [supplier, setSupplier] = useState<Supplier[]>([]);
   const [tab, setTab] = useState<StatusPembelian>("selesai");
@@ -77,7 +80,6 @@ export default function FakturPembelianPage() {
   const [periodDays, setPeriodDays] = useState(30);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
   useEffect(() => {
@@ -136,14 +138,13 @@ export default function FakturPembelianPage() {
         title="Pembelian"
         subtitle="Kelola data pembelian Anda"
         action={
-          <button
-            type="button"
-            onClick={() => router.push("/pembelian/faktur/baru")}
+          <Link
+            href="/pembelian/faktur/baru"
             className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
           >
             <Plus className="h-4 w-4" />
             Pembelian Baru
-          </button>
+          </Link>
         }
       />
 
@@ -236,10 +237,12 @@ export default function FakturPembelianPage() {
                 {paginate(filtered, page, pageSize).map((p) => (
                   <tr
                     key={p.id}
-                    onClick={() => setSelectedId(p.id)}
-                    className="cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
+                    className="relative cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
                   >
-                    <td className="py-3 pr-4 font-semibold text-green-600">{p.kode}</td>
+                    <td className="py-3 pr-4 font-semibold text-green-600">
+                      <Link href={`/pembelian/faktur/${p.id}`} className="absolute inset-0" aria-label={`Lihat detail ${p.kode}`} />
+                      {p.kode}
+                    </td>
                     <td className="py-3 pr-4 text-zinc-700">{namaSupplier(p.supplierId)}</td>
                     <td className="py-3 pr-4 text-zinc-500">{formatDateLong(p.tanggal)}</td>
                     <td className="py-3 pr-4 text-right">
@@ -277,11 +280,11 @@ export default function FakturPembelianPage() {
           pembelianId={selectedId}
           ids={filtered.map((p) => p.id)}
           supplierList={supplier}
-          onClose={() => setSelectedId(null)}
-          onNavigate={setSelectedId}
+          onClose={() => router.push("/pembelian/faktur")}
+          onNavigate={(id) => router.push(`/pembelian/faktur/${id}`)}
           onDeleted={(id) => {
             setPembelian((prev) => prev?.filter((p) => p.id !== id) ?? null);
-            setSelectedId(null);
+            router.push("/pembelian/faktur");
           }}
         />
       )}

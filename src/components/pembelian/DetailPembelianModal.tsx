@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
 import {
   ChevronDown,
@@ -244,14 +245,13 @@ export function DetailPembelianModal({ pembelianId, ids, supplierList, onClose, 
           </div>
           <div className="flex items-center gap-2">
             {pembelian && pembelian.status !== "dibatalkan" && (
-              <button
-                type="button"
-                onClick={() => router.push(`/pembelian/faktur/${pembelianId}/edit`)}
+              <Link
+                href={`/pembelian/faktur/${pembelianId}/edit`}
                 className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
               >
                 <Pencil className="h-3.5 w-3.5" />
                 Edit Invoice
-              </button>
+              </Link>
             )}
             {pembelian && (
               <button

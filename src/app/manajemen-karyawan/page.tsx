@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
 import { CheckCircle2, FileText, Pencil, Plus, Search, Trash2, Users, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
@@ -136,7 +136,6 @@ const STATUS_KARYAWAN_ORDER: Record<StatusKaryawan, number> = {
 };
 
 function KaryawanTab({ karyawan, posisi }: { karyawan: Karyawan[] | null; posisi: Posisi[] }) {
-  const router = useRouter();
   const [search, setSearch] = useState("");
   const [posisiFilter, setPosisiFilter] = useState("");
   const [pageSize, setPageSize] = useState(10);
@@ -272,10 +271,16 @@ function KaryawanTab({ karyawan, posisi }: { karyawan: Karyawan[] | null; posisi
               {paged.map((k) => (
                 <tr
                   key={k.id}
-                  onClick={() => router.push(`/manajemen-karyawan/karyawan/${k.id}`)}
-                  className="cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
+                  className="relative cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
                 >
-                  <td className="py-3 pr-4 font-medium text-zinc-900">{k.kode}</td>
+                  <td className="py-3 pr-4 font-medium text-zinc-900">
+                    <Link
+                      href={`/manajemen-karyawan/karyawan/${k.id}`}
+                      className="absolute inset-0"
+                      aria-label={`Lihat detail ${k.nama}`}
+                    />
+                    {k.kode}
+                  </td>
                   <td className="py-3 pr-4 text-zinc-700">{k.nama}</td>
                   <td className="py-3 pr-4 text-zinc-500">{k.telepon || k.email || "-"}</td>
                   <td className="py-3 pr-4 text-zinc-500">{k.posisiId ? posisiMap.get(k.posisiId) ?? "-" : "-"}</td>

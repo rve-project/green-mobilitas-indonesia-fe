@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Download, Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { StokOpname } from "@/lib/types";
@@ -23,7 +23,6 @@ const PERIOD_OPTIONS = [
 type SortKey = "kode" | "tanggal" | "lokasi" | "jumlahItem" | "itemSelisih";
 
 export default function StokOpnamePage() {
-  const router = useRouter();
   const [stokOpname, setStokOpname] = useState<StokOpname[] | null>(null);
   const [search, setSearch] = useState("");
   const [periodDays, setPeriodDays] = useState(30);
@@ -101,14 +100,13 @@ export default function StokOpnamePage() {
               <Download className="h-4 w-4" />
               {exporting ? "Mengekspor..." : "Export"}
             </button>
-            <button
-              type="button"
-              onClick={() => router.push("/manajemen-stok/stok-opname/baru")}
+            <Link
+              href="/manajemen-stok/stok-opname/baru"
               className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
             >
               <Plus className="h-4 w-4" />
               Stok Opname Baru
-            </button>
+            </Link>
           </div>
         }
       />

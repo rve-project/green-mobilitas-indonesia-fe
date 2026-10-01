@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
 import { Building2, CheckCircle2, Plus, Search, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
@@ -22,7 +22,6 @@ const STATUS_ORDER: Record<Supplier["status"], number> = {
 };
 
 export default function SupplierPage() {
-  const router = useRouter();
   const [supplier, setSupplier] = useState<Supplier[] | null>(null);
   const [stats, setStats] = useState<SupplierStats | null>(null);
   const [search, setSearch] = useState("");
@@ -177,10 +176,12 @@ export default function SupplierPage() {
                   {paged.map((s) => (
                     <tr
                       key={s.id}
-                      onClick={() => router.push(`/supplier/${s.id}`)}
-                      className="cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
+                      className="relative cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
                     >
-                      <td className="py-3 pr-4 font-medium text-zinc-900">{s.kode}</td>
+                      <td className="py-3 pr-4 font-medium text-zinc-900">
+                        <Link href={`/supplier/${s.id}`} className="absolute inset-0" aria-label={`Lihat detail ${s.nama}`} />
+                        {s.kode}
+                      </td>
                       <td className="py-3 pr-4 text-zinc-700">{s.nama}</td>
                       <td className="py-3 pr-4 text-zinc-500">{s.email || "-"}</td>
                       <td className="py-3 pr-4 text-zinc-500">{s.telepon || "-"}</td>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
 import { Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
@@ -47,7 +47,6 @@ const STATUS_ORDER: Record<StatusPengeluaranBarang, number> = {
 };
 
 export default function PengeluaranBarangPage() {
-  const router = useRouter();
   const [data, setData] = useState<PengeluaranBarang[] | null>(null);
   const [search, setSearch] = useState("");
   const [periodDays, setPeriodDays] = useState(30);
@@ -94,14 +93,13 @@ export default function PengeluaranBarangPage() {
         title="Pengeluaran Barang"
         subtitle="Kelola pengeluaran barang"
         action={
-          <button
-            type="button"
-            onClick={() => router.push("/manajemen-stok/pengeluaran-barang/baru")}
+          <Link
+            href="/manajemen-stok/pengeluaran-barang/baru"
             className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
           >
             <Plus className="h-4 w-4" />
             Buat Baru
-          </button>
+          </Link>
         }
       />
 
@@ -184,10 +182,16 @@ export default function PengeluaranBarangPage() {
                 {paginate(filtered, page, pageSize).map((d) => (
                   <tr
                     key={d.id}
-                    onClick={() => router.push(`/manajemen-stok/pengeluaran-barang/${d.id}`)}
-                    className="cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
+                    className="relative cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
                   >
-                    <td className="py-3 pr-4 font-semibold text-green-600">{d.kode}</td>
+                    <td className="py-3 pr-4 font-semibold text-green-600">
+                      <Link
+                        href={`/manajemen-stok/pengeluaran-barang/${d.id}`}
+                        className="absolute inset-0"
+                        aria-label={`Lihat detail ${d.kode}`}
+                      />
+                      {d.kode}
+                    </td>
                     <td className="py-3 pr-4 text-zinc-500">{formatDateLong(d.tanggal)}</td>
                     <td className="py-3 pr-4 text-right text-zinc-700">{d.items.length} barang</td>
                     <td className="py-3 pr-4 text-zinc-700">{d.alasan}</td>

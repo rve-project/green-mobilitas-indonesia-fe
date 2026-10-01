@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { FileText, Plus, Save, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Barang, Lokasi } from "@/lib/types";
@@ -292,13 +293,12 @@ export default function PenerimaanBarangBaruPage() {
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.push("/manajemen-stok/penerimaan-barang")}
+        <Link
+          href="/manajemen-stok/penerimaan-barang"
           className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
         >
           Batal
-        </button>
+        </Link>
         <button
           type="button"
           disabled={!canSubmit}

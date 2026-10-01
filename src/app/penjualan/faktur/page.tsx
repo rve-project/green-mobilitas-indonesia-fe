@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
 import { Plus, Search } from "lucide-react";
 import { api } from "@/lib/api";
@@ -41,7 +42,7 @@ function StatusPekerjaanSelect({
   onChange: (value: "selesai" | "belum_selesai") => void;
 }) {
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    <div className="relative">
       <Select
         value={status ?? "selesai"}
         onChange={(v) => onChange(v as "selesai" | "belum_selesai")}
@@ -77,6 +78,8 @@ type SortKey =
 
 export default function FakturPenjualanPage() {
   const router = useRouter();
+  const params = useParams<{ id?: string }>();
+  const selectedId = params?.id ?? null;
   const [invoice, setInvoice] = useState<Invoice[] | null>(null);
   const [pelanggan, setPelanggan] = useState<Pelanggan[]>([]);
   const [kendaraan, setKendaraan] = useState<Kendaraan[]>([]);
@@ -85,7 +88,6 @@ export default function FakturPenjualanPage() {
   const [periodDays, setPeriodDays] = useState(30);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
   async function handleStatusPekerjaanChange(id: string, value: "selesai" | "belum_selesai") {
@@ -185,14 +187,13 @@ export default function FakturPenjualanPage() {
         title="Penjualan"
         subtitle="Kelola data penjualan Anda"
         action={
-          <button
-            type="button"
-            onClick={() => router.push("/penjualan/faktur/baru")}
+          <Link
+            href="/penjualan/faktur/baru"
             className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
           >
             <Plus className="h-4 w-4" />
             Invoice Baru
-          </button>
+          </Link>
         }
       />
 
@@ -287,10 +288,12 @@ export default function FakturPenjualanPage() {
                 {paginate(filtered, page, pageSize).map((inv) => (
                   <tr
                     key={inv.id}
-                    onClick={() => setSelectedId(inv.id)}
-                    className="cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
+                    className="relative cursor-pointer border-b border-zinc-50 last:border-0 hover:bg-zinc-50"
                   >
-                    <td className="py-3 pr-4 font-semibold text-green-600">{inv.kode}</td>
+                    <td className="py-3 pr-4 font-semibold text-green-600">
+                      <Link href={`/penjualan/faktur/${inv.id}`} className="absolute inset-0" aria-label={`Lihat detail ${inv.kode}`} />
+                      {inv.kode}
+                    </td>
                     <td className="py-3 pr-4 text-zinc-700">{namaPelanggan(inv.pelangganId)}</td>
                     <td className="py-3 pr-4 text-zinc-700">{kendaraanLabel(inv) || "-"}</td>
                     <td className="py-3 pr-4 text-zinc-700">{platLabel(inv) || "-"}</td>
@@ -334,11 +337,11 @@ export default function FakturPenjualanPage() {
           ids={filtered.map((inv) => inv.id)}
           pelangganList={pelanggan}
           kendaraanList={kendaraan}
-          onClose={() => setSelectedId(null)}
-          onNavigate={setSelectedId}
+          onClose={() => router.push("/penjualan/faktur")}
+          onNavigate={(id) => router.push(`/penjualan/faktur/${id}`)}
           onDeleted={(id) => {
             setInvoice((prev) => prev?.filter((inv) => inv.id !== id) ?? null);
-            setSelectedId(null);
+            router.push("/penjualan/faktur");
           }}
         />
       )}
