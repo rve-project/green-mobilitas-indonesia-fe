@@ -312,9 +312,6 @@ function DotMatrixDocument({
   pajakNominal,
 }: DocProps) {
   const kendaraanUtama = kendaraan[0];
-  const dibayar = invoice.dibayar ?? 0;
-  const sisaBayar = invoice.total - dibayar;
-  const statusLabel = jenis === "kwitansi" ? null : dibayar <= 0 ? "UNPAID" : sisaBayar <= 0 ? "LUNAS" : "PARTIAL";
 
   return (
     <div className="mx-auto w-[190mm] bg-white p-[8mm] text-[10px] leading-tight text-black shadow-lg print:w-auto print:shadow-none">
@@ -326,11 +323,8 @@ function DotMatrixDocument({
             <p className="mt-0.5 text-[9px] text-zinc-600">Invoice ini bersifat proforma (specimen), belum dibayarkan.</p>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          {statusLabel && <p className="text-sm font-bold">{statusLabel}</p>}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 object-contain" />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 object-contain" />
       </div>
 
       <div className="my-2 border-t border-black" />

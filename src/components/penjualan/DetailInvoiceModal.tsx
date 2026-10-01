@@ -440,9 +440,14 @@ export function DetailInvoiceModal({
                               </p>
                             </div>
                           </div>
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600">
-                            {k.platNomor}
-                          </span>
+                          <div className="text-right">
+                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600">
+                              {k.platNomor}
+                            </span>
+                            {!!invoice.kilometer && (
+                              <p className="mt-1 text-xs text-zinc-400">{invoice.kilometer.toLocaleString("id-ID")} KM</p>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
