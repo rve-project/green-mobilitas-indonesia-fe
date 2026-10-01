@@ -8,25 +8,20 @@ export interface SortCriterion<K extends string> {
   dir: SortDir;
 }
 
-/** Multi-column sort state. Click a column to make it the PRIMARY sort -- whatever was
- * already active (if anything) is kept, demoted into tie-breaker tiers behind it, so every
- * click has an immediately visible effect (unlike "first click stays primary forever", where
- * a unique primary column like Kode would make every later click a no-op). Click the column
- * that's already primary again to flip its direction in place. Click a column that's already
- * an active (but non-primary) tie-breaker to promote it to primary, keeping its direction.
- * Pair with SortableTh and compareMulti(). */
+/** Single-column sort state (kept as a one-item array so it still pairs with SortableTh and
+ * compareMulti() unchanged). Click a column to sort by it, replacing whatever was active.
+ * Click the already-active column again to flip its direction in place. */
 export function useSort<K extends string>(defaultKey: K, defaultDir: SortDir = "asc") {
   const initial: SortCriterion<K>[] = [{ key: defaultKey, dir: defaultDir }];
   const [criteria, setCriteria] = useState<SortCriterion<K>[]>(initial);
 
   function toggleSort(key: K) {
     setCriteria((prev) => {
-      const idx = prev.findIndex((c) => c.key === key);
-      if (idx === -1) return [{ key, dir: "asc" }, ...prev];
-      const current = prev[idx];
-      const rest = prev.filter((c) => c.key !== key);
-      const nextDir: SortDir = idx === 0 ? (current.dir === "asc" ? "desc" : "asc") : current.dir;
-      return [{ key, dir: nextDir }, ...rest];
+      const current = prev[0];
+      if (current && current.key === key) {
+        return [{ key, dir: current.dir === "asc" ? "desc" : "asc" }];
+      }
+      return [{ key, dir: "asc" }];
     });
   }
 
