@@ -266,6 +266,12 @@ export const api = {
   exportLaporanXlsx: (data: { sheetName: string; headers: string[]; rows: (string | number)[][]; filename: string }) =>
     downloadFilePost("/laporan/export-xlsx", data.filename, data),
   importBarang: (file: File) => uploadFile<ImportSummary>("/barang/import", file),
+  reconcileStokLokasiPreview: () =>
+    get<{ count: number; items: { id: string; kode: string; nama: string; stok: number; stokLokasiSum: number; selisih: number }[] }>(
+      "/barang/stok-lokasi/reconcile-preview"
+    ),
+  reconcileStokLokasi: () =>
+    post<{ fixed: number; items: { kode: string; nama: string; selisih: number }[] }>("/barang/stok-lokasi/reconcile", {}),
   updateJasa: (id: string, data: Partial<Omit<Jasa, "id" | "createdAt">>) => put<Jasa>(`/jasa/${id}`, data),
   deleteJasa: (id: string) => del<void>(`/jasa/${id}`),
   downloadJasaTemplate: () => downloadFile("/jasa/template", "template-jasa.xlsx"),

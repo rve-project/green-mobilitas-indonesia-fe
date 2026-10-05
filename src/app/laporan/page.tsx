@@ -54,6 +54,17 @@ export default function LaporanPage() {
   const [stokSubLokasi, setStokSubLokasi] = useState("");
   const [stokCariItem, setStokCariItem] = useState("");
 
+  // One-time admin fix-up for the "barang.stok vs stokLokasi out of sync" gap -- see the
+  // reconcileStokLokasi* backend endpoints for why this is needed.
+  const [reconcileChecking, setReconcileChecking] = useState(false);
+  const [reconcilePreview, setReconcilePreview] = useState<{
+    count: number;
+    items: { id: string; kode: string; nama: string; stok: number; stokLokasiSum: number; selisih: number }[];
+  } | null>(null);
+  const [reconcileApplying, setReconcileApplying] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState<{ fixed: number } | null>(null);
+  const [reconcileError, setReconcileError] = useState<string | null>(null);
+
   const lokasiOptions = useMemo(
     () => (dataset?.lokasiList ?? []).filter((l) => l.status === "aktif").map((l) => ({ value: l.nama, label: l.nama })),
     [dataset]
@@ -129,6 +140,35 @@ export default function LaporanPage() {
       setResult(computeReport(selectedReport, periodRange(), dataset));
     }
     setExportError(null);
+  }
+
+  async function checkReconcile() {
+    setReconcileError(null);
+    setReconcileResult(null);
+    setReconcileChecking(true);
+    try {
+      const preview = await api.reconcileStokLokasiPreview();
+      setReconcilePreview(preview);
+    } catch (err) {
+      setReconcileError(err instanceof Error ? err.message : "Gagal memeriksa data");
+    } finally {
+      setReconcileChecking(false);
+    }
+  }
+
+  async function applyReconcile() {
+    setReconcileApplying(true);
+    setReconcileError(null);
+    try {
+      const res = await api.reconcileStokLokasi();
+      setReconcileResult({ fixed: res.fixed });
+      setReconcilePreview(null);
+      if (selectedReport === "stok-per-lokasi") generate();
+    } catch (err) {
+      setReconcileError(err instanceof Error ? err.message : "Gagal memperbaiki data");
+    } finally {
+      setReconcileApplying(false);
+    }
   }
 
   function periodQuery(): URLSearchParams {
@@ -328,6 +368,29 @@ export default function LaporanPage() {
           </div>
         )}
 
+        {selectedReport === "stok-per-lokasi" && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-4 py-3">
+            <p className="flex-1 text-xs text-amber-700">
+              Kalau ada barang yang stoknya tidak muncul di sini padahal sudah dibeli (datanya belum tercatat per
+              lokasi), klik tombol ini untuk memeriksa dan memperbaikinya.
+            </p>
+            <button
+              type="button"
+              disabled={reconcileChecking}
+              onClick={checkReconcile}
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+            >
+              {reconcileChecking ? "Memeriksa..." : "Cek & Perbaiki Data Stok"}
+            </button>
+          </div>
+        )}
+        {reconcileResult && (
+          <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            Selesai. {reconcileResult.fixed} barang diperbaiki.
+          </p>
+        )}
+        {reconcileError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{reconcileError}</p>}
+
         {exportError && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{exportError}</p>}
 
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-4">
@@ -405,6 +468,69 @@ export default function LaporanPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {reconcilePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="flex w-full max-w-lg flex-col rounded-xl bg-white shadow-xl">
+            <div className="border-b border-zinc-100 px-6 py-4">
+              <h2 className="text-lg font-semibold text-zinc-900">Perbaiki Data Stok per Lokasi</h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                {reconcilePreview.count === 0
+                  ? "Semua data stok per lokasi sudah sesuai, tidak ada yang perlu diperbaiki."
+                  : `Ditemukan ${reconcilePreview.count} barang yang stok per lokasinya belum sesuai dengan stok total. Selisihnya akan ditambahkan ke lokasi "GMI Harapan Indah".`}
+              </p>
+            </div>
+            {reconcilePreview.count > 0 && (
+              <div className="max-h-72 overflow-y-auto px-6 py-3">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="text-zinc-400">
+                      <th className="py-1.5 pr-3 font-medium">Kode</th>
+                      <th className="py-1.5 pr-3 font-medium">Nama</th>
+                      <th className="py-1.5 pr-3 text-right font-medium">Stok Total</th>
+                      <th className="py-1.5 pr-3 text-right font-medium">Stok per Lokasi</th>
+                      <th className="py-1.5 text-right font-medium">Selisih</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reconcilePreview.items.map((item) => (
+                      <tr key={item.id} className="border-t border-zinc-50">
+                        <td className="py-1.5 pr-3 font-medium text-green-600">{item.kode}</td>
+                        <td className="py-1.5 pr-3 text-zinc-700">{item.nama}</td>
+                        <td className="py-1.5 pr-3 text-right text-zinc-700">{item.stok}</td>
+                        <td className="py-1.5 pr-3 text-right text-zinc-700">{item.stokLokasiSum}</td>
+                        <td className="py-1.5 text-right font-semibold text-amber-600">
+                          {item.selisih > 0 ? "+" : ""}
+                          {item.selisih}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-3 border-t border-zinc-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setReconcilePreview(null)}
+                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
+              >
+                Batal
+              </button>
+              {reconcilePreview.count > 0 && (
+                <button
+                  type="button"
+                  disabled={reconcileApplying}
+                  onClick={applyReconcile}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
+                >
+                  {reconcileApplying ? "Memperbaiki..." : `Perbaiki ${reconcilePreview.count} Barang`}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
