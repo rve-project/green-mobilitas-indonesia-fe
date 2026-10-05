@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { Download, FileText, Printer, RefreshCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { Category, fetchLaporanDataset, computeReport, LaporanDataset, REPORTS, ReportKey, ReportResult } from "@/lib/laporanCompute";
+import { formatDateLong } from "@/lib/format";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
@@ -75,6 +76,15 @@ export default function LaporanPage() {
   const [orphanApplying, setOrphanApplying] = useState(false);
   const [orphanResult, setOrphanResult] = useState<{ restored: number } | null>(null);
   const [orphanError, setOrphanError] = useState<string | null>(null);
+
+  // Read-only audit trail for a single barang -- "why is this item's stock what it is".
+  const [riwayatQuery, setRiwayatQuery] = useState("");
+  const [riwayatLoading, setRiwayatLoading] = useState(false);
+  const [riwayatError, setRiwayatError] = useState<string | null>(null);
+  const [riwayatData, setRiwayatData] = useState<{
+    barang: { id: string; kode: string; nama: string; stok: number };
+    events: { tanggal: string; tipe: string; kode: string; perubahan: number; keterangan: string }[];
+  } | null>(null);
 
   const lokasiOptions = useMemo(
     () => (dataset?.lokasiList ?? []).filter((l) => l.status === "aktif").map((l) => ({ value: l.nama, label: l.nama })),
@@ -208,6 +218,27 @@ export default function LaporanPage() {
       setOrphanError(err instanceof Error ? err.message : "Gagal memulihkan data");
     } finally {
       setOrphanApplying(false);
+    }
+  }
+
+  async function checkRiwayat() {
+    setRiwayatError(null);
+    setRiwayatData(null);
+    const q = riwayatQuery.trim().toLowerCase();
+    if (!q || !dataset) return;
+    const match = dataset.allBarang.find((b) => b.kode.toLowerCase() === q || b.kode.toLowerCase().includes(q) || b.nama.toLowerCase().includes(q));
+    if (!match) {
+      setRiwayatError("Barang tidak ditemukan di katalog (cek kode/nama).");
+      return;
+    }
+    setRiwayatLoading(true);
+    try {
+      const res = await api.riwayatStokBarang(match.id);
+      setRiwayatData(res);
+    } catch (err) {
+      setRiwayatError(err instanceof Error ? err.message : "Gagal mengambil riwayat");
+    } finally {
+      setRiwayatLoading(false);
     }
   }
 
@@ -454,6 +485,28 @@ export default function LaporanPage() {
         )}
         {orphanError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{orphanError}</p>}
 
+        {selectedReport === "stok-per-lokasi" && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-zinc-50 px-4 py-3">
+            <p className="text-xs font-medium text-zinc-600">Lacak riwayat stok 1 barang:</p>
+            <input
+              value={riwayatQuery}
+              onChange={(e) => setRiwayatQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && checkRiwayat()}
+              placeholder="Kode atau nama barang..."
+              className="w-56 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+            />
+            <button
+              type="button"
+              disabled={riwayatLoading || !riwayatQuery.trim()}
+              onClick={checkRiwayat}
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 disabled:opacity-60"
+            >
+              {riwayatLoading ? "Mencari..." : "Lihat Riwayat"}
+            </button>
+          </div>
+        )}
+        {riwayatError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{riwayatError}</p>}
+
         {exportError && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{exportError}</p>}
 
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-4">
@@ -650,6 +703,67 @@ export default function LaporanPage() {
                 >
                   {orphanApplying ? "Memulihkan..." : `Munculkan ${orphanPreview.count} Barang`}
                 </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {riwayatData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="flex w-full max-w-xl flex-col rounded-xl bg-white shadow-xl">
+            <div className="flex items-start justify-between border-b border-zinc-100 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900">Riwayat Stok: {riwayatData.barang.nama}</h2>
+                <p className="mt-0.5 text-sm text-zinc-500">
+                  {riwayatData.barang.kode} · Stok saat ini: <span className="font-semibold text-zinc-700">{riwayatData.barang.stok}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRiwayatData(null)}
+                className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="max-h-96 overflow-y-auto px-6 py-3">
+              {riwayatData.events.length === 0 ? (
+                <p className="py-6 text-center text-sm text-zinc-400">
+                  Tidak ada riwayat transaksi sama sekali untuk barang ini -- stoknya 0 karena memang belum pernah ada
+                  pergerakan stok yang tercatat.
+                </p>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="text-zinc-400">
+                      <th className="py-1.5 pr-3 font-medium">Tanggal</th>
+                      <th className="py-1.5 pr-3 font-medium">Tipe</th>
+                      <th className="py-1.5 pr-3 font-medium">Kode</th>
+                      <th className="py-1.5 pr-3 font-medium">Keterangan</th>
+                      <th className="py-1.5 text-right font-medium">Perubahan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {riwayatData.events.map((ev, i) => (
+                      <tr key={i} className="border-t border-zinc-50">
+                        <td className="py-1.5 pr-3 text-zinc-500">{formatDateLong(ev.tanggal)}</td>
+                        <td className="py-1.5 pr-3 text-zinc-700">{ev.tipe}</td>
+                        <td className="py-1.5 pr-3 font-medium text-green-600">{ev.kode}</td>
+                        <td className="py-1.5 pr-3 text-zinc-500">{ev.keterangan}</td>
+                        <td
+                          className={clsx(
+                            "py-1.5 text-right font-semibold",
+                            ev.perubahan > 0 ? "text-emerald-600" : ev.perubahan < 0 ? "text-red-500" : "text-zinc-400"
+                          )}
+                        >
+                          {ev.perubahan > 0 ? "+" : ""}
+                          {ev.perubahan}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>

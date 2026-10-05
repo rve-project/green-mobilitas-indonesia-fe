@@ -278,6 +278,11 @@ export const api = {
     ),
   restoreOrphanedItems: () =>
     post<{ restored: number; items: { kode: string; nama: string; stok: number }[] }>("/barang/orphaned-items/restore", {}),
+  riwayatStokBarang: (id: string) =>
+    get<{
+      barang: { id: string; kode: string; nama: string; stok: number; stokLokasi: unknown[] };
+      events: { tanggal: string; tipe: string; kode: string; perubahan: number; keterangan: string }[];
+    }>(`/barang/${id}/riwayat-stok`),
   updateJasa: (id: string, data: Partial<Omit<Jasa, "id" | "createdAt">>) => put<Jasa>(`/jasa/${id}`, data),
   deleteJasa: (id: string) => del<void>(`/jasa/${id}`),
   downloadJasaTemplate: () => downloadFile("/jasa/template", "template-jasa.xlsx"),
