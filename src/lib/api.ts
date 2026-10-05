@@ -267,7 +267,7 @@ export const api = {
     downloadFilePost("/laporan/export-xlsx", data.filename, data),
   importBarang: (file: File) => uploadFile<ImportSummary>("/barang/import", file),
   reconcileStokLokasiPreview: () =>
-    get<{ count: number; items: { id: string; kode: string; nama: string; stok: number; stokLokasiSum: number; selisih: number }[] }>(
+    get<{ count: number; items: { id: string; kode: string; nama: string; stok: number; stokSeharusnya: number; selisih: number }[] }>(
       "/barang/stok-lokasi/reconcile-preview"
     ),
   reconcileStokLokasi: () =>

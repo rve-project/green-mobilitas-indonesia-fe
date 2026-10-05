@@ -60,7 +60,7 @@ export default function LaporanPage() {
   const [reconcileChecking, setReconcileChecking] = useState(false);
   const [reconcilePreview, setReconcilePreview] = useState<{
     count: number;
-    items: { id: string; kode: string; nama: string; stok: number; stokLokasiSum: number; selisih: number }[];
+    items: { id: string; kode: string; nama: string; stok: number; stokSeharusnya: number; selisih: number }[];
   } | null>(null);
   const [reconcileApplying, setReconcileApplying] = useState(false);
   const [reconcileResult, setReconcileResult] = useState<{ fixed: number } | null>(null);
@@ -442,8 +442,8 @@ export default function LaporanPage() {
         {selectedReport === "stok-per-lokasi" && (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-4 py-3">
             <p className="flex-1 text-xs text-amber-700">
-              Kalau ada barang yang stoknya tidak muncul di sini padahal sudah dibeli (datanya belum tercatat per
-              lokasi), klik tombol ini untuk memeriksa dan memperbaikinya.
+              Kalau ada barang yang stoknya tidak sesuai dengan riwayat transaksinya (sudah dibeli/terjual tapi
+              angkanya tidak nyambung), klik tombol ini untuk menghitung ulang dari riwayat dan memperbaikinya.
             </p>
             <button
               type="button"
@@ -595,8 +595,8 @@ export default function LaporanPage() {
               <h2 className="text-lg font-semibold text-zinc-900">Perbaiki Data Stok per Lokasi</h2>
               <p className="mt-1 text-sm text-zinc-500">
                 {reconcilePreview.count === 0
-                  ? "Semua data stok per lokasi sudah sesuai, tidak ada yang perlu diperbaiki."
-                  : `Ditemukan ${reconcilePreview.count} barang yang stok per lokasinya belum sesuai dengan stok total. Selisihnya akan ditambahkan ke lokasi "GMI Harapan Indah".`}
+                  ? "Semua data stok sudah sesuai dengan riwayat transaksi, tidak ada yang perlu diperbaiki."
+                  : `Ditemukan ${reconcilePreview.count} barang yang stok tercatatnya tidak sesuai dengan hasil hitung ulang riwayat transaksi (Pembelian, Penjualan, Retur, dll). Selisihnya akan disesuaikan ke lokasi "GMI Harapan Indah".`}
               </p>
             </div>
             {reconcilePreview.count > 0 && (
@@ -606,8 +606,8 @@ export default function LaporanPage() {
                     <tr className="text-zinc-400">
                       <th className="py-1.5 pr-3 font-medium">Kode</th>
                       <th className="py-1.5 pr-3 font-medium">Nama</th>
-                      <th className="py-1.5 pr-3 text-right font-medium">Stok Total</th>
-                      <th className="py-1.5 pr-3 text-right font-medium">Stok per Lokasi</th>
+                      <th className="py-1.5 pr-3 text-right font-medium">Stok Tercatat</th>
+                      <th className="py-1.5 pr-3 text-right font-medium">Seharusnya</th>
                       <th className="py-1.5 text-right font-medium">Selisih</th>
                     </tr>
                   </thead>
@@ -617,7 +617,7 @@ export default function LaporanPage() {
                         <td className="py-1.5 pr-3 font-medium text-green-600">{item.kode}</td>
                         <td className="py-1.5 pr-3 text-zinc-700">{item.nama}</td>
                         <td className="py-1.5 pr-3 text-right text-zinc-700">{item.stok}</td>
-                        <td className="py-1.5 pr-3 text-right text-zinc-700">{item.stokLokasiSum}</td>
+                        <td className="py-1.5 pr-3 text-right text-zinc-700">{item.stokSeharusnya}</td>
                         <td className="py-1.5 text-right font-semibold text-amber-600">
                           {item.selisih > 0 ? "+" : ""}
                           {item.selisih}
