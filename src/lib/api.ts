@@ -272,6 +272,12 @@ export const api = {
     ),
   reconcileStokLokasi: () =>
     post<{ fixed: number; items: { kode: string; nama: string; selisih: number }[] }>("/barang/stok-lokasi/reconcile", {}),
+  orphanedItemsPreview: () =>
+    get<{ count: number; items: { itemId: string; kode: string; nama: string; satuan: string; hargaBeli: number; stok: number }[] }>(
+      "/barang/orphaned-items/preview"
+    ),
+  restoreOrphanedItems: () =>
+    post<{ restored: number; items: { kode: string; nama: string; stok: number }[] }>("/barang/orphaned-items/restore", {}),
   updateJasa: (id: string, data: Partial<Omit<Jasa, "id" | "createdAt">>) => put<Jasa>(`/jasa/${id}`, data),
   deleteJasa: (id: string) => del<void>(`/jasa/${id}`),
   downloadJasaTemplate: () => downloadFile("/jasa/template", "template-jasa.xlsx"),

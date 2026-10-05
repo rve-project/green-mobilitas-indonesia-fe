@@ -283,9 +283,22 @@ export function computeReport(
       const subLokasiFilter = stokPerLokasiFilter?.subLokasi?.trim().toLowerCase();
       const cariItemFilter = stokPerLokasiFilter?.cariItem?.trim().toLowerCase();
 
+      // Barang are only ever stored as a GMI Harapan Indah operation today, so any barang that
+      // has no stokLokasi entry at all (never purchased/received into a location yet) is still
+      // shown here at 0 under that default location, instead of silently vanishing from the
+      // report -- otherwise the catalog and this report drift further apart every time a
+      // flow's location-bookkeeping gap goes unnoticed.
+      const DEFAULT_LOKASI = "GMI Harapan Indah";
       const rowsData: { kode: string; nama: string; lokasi: string; subLokasi: string; qty: number; satuan: string }[] = [];
       d.allBarang.forEach((b) => {
+        if (!b.aktif) return;
         if (cariItemFilter && !b.kode.toLowerCase().includes(cariItemFilter) && !b.nama.toLowerCase().includes(cariItemFilter)) {
+          return;
+        }
+        if (b.stokLokasi.length === 0) {
+          if (lokasiFilter && lokasiFilter !== DEFAULT_LOKASI) return;
+          if (subLokasiFilter) return;
+          rowsData.push({ kode: b.kode, nama: b.nama, lokasi: DEFAULT_LOKASI, subLokasi: "-", qty: 0, satuan: b.satuan });
           return;
         }
         b.stokLokasi.forEach((sl) => {

@@ -65,6 +65,17 @@ export default function LaporanPage() {
   const [reconcileResult, setReconcileResult] = useState<{ fixed: number } | null>(null);
   const [reconcileError, setReconcileError] = useState<string | null>(null);
 
+  // Barang whose catalog record is gone but still show up in old Pembelian/Penerimaan
+  // history (most likely deleted after being referenced) -- recreated at their original id.
+  const [orphanChecking, setOrphanChecking] = useState(false);
+  const [orphanPreview, setOrphanPreview] = useState<{
+    count: number;
+    items: { itemId: string; kode: string; nama: string; satuan: string; hargaBeli: number; stok: number }[];
+  } | null>(null);
+  const [orphanApplying, setOrphanApplying] = useState(false);
+  const [orphanResult, setOrphanResult] = useState<{ restored: number } | null>(null);
+  const [orphanError, setOrphanError] = useState<string | null>(null);
+
   const lokasiOptions = useMemo(
     () => (dataset?.lokasiList ?? []).filter((l) => l.status === "aktif").map((l) => ({ value: l.nama, label: l.nama })),
     [dataset]
@@ -168,6 +179,35 @@ export default function LaporanPage() {
       setReconcileError(err instanceof Error ? err.message : "Gagal memperbaiki data");
     } finally {
       setReconcileApplying(false);
+    }
+  }
+
+  async function checkOrphans() {
+    setOrphanError(null);
+    setOrphanResult(null);
+    setOrphanChecking(true);
+    try {
+      const preview = await api.orphanedItemsPreview();
+      setOrphanPreview(preview);
+    } catch (err) {
+      setOrphanError(err instanceof Error ? err.message : "Gagal memeriksa data");
+    } finally {
+      setOrphanChecking(false);
+    }
+  }
+
+  async function applyRestoreOrphans() {
+    setOrphanApplying(true);
+    setOrphanError(null);
+    try {
+      const res = await api.restoreOrphanedItems();
+      setOrphanResult({ restored: res.restored });
+      setOrphanPreview(null);
+      if (selectedReport === "stok-per-lokasi") generate();
+    } catch (err) {
+      setOrphanError(err instanceof Error ? err.message : "Gagal memulihkan data");
+    } finally {
+      setOrphanApplying(false);
     }
   }
 
@@ -391,6 +431,29 @@ export default function LaporanPage() {
         )}
         {reconcileError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{reconcileError}</p>}
 
+        {selectedReport === "stok-per-lokasi" && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-4 py-3">
+            <p className="flex-1 text-xs text-amber-700">
+              Kalau ada barang yang pernah dibeli (muncul di Pembelian) tapi sekarang tidak ada lagi di menu Barang &amp;
+              Jasa, klik ini untuk memunculkannya kembali beserta stoknya.
+            </p>
+            <button
+              type="button"
+              disabled={orphanChecking}
+              onClick={checkOrphans}
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+            >
+              {orphanChecking ? "Memeriksa..." : "Cek Barang Hilang dari Katalog"}
+            </button>
+          </div>
+        )}
+        {orphanResult && (
+          <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            Selesai. {orphanResult.restored} barang dimunculkan kembali ke katalog.
+          </p>
+        )}
+        {orphanError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{orphanError}</p>}
+
         {exportError && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{exportError}</p>}
 
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-4">
@@ -528,6 +591,64 @@ export default function LaporanPage() {
                   className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
                 >
                   {reconcileApplying ? "Memperbaiki..." : `Perbaiki ${reconcilePreview.count} Barang`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {orphanPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="flex w-full max-w-lg flex-col rounded-xl bg-white shadow-xl">
+            <div className="border-b border-zinc-100 px-6 py-4">
+              <h2 className="text-lg font-semibold text-zinc-900">Barang Hilang dari Katalog</h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                {orphanPreview.count === 0
+                  ? "Tidak ada barang yang hilang dari katalog."
+                  : `Ditemukan ${orphanPreview.count} barang yang pernah dibeli tapi sudah tidak ada di katalog. Stoknya dihitung ulang dari riwayat transaksi dan akan dimasukkan ke lokasi "GMI Harapan Indah".`}
+              </p>
+            </div>
+            {orphanPreview.count > 0 && (
+              <div className="max-h-72 overflow-y-auto px-6 py-3">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="text-zinc-400">
+                      <th className="py-1.5 pr-3 font-medium">Kode</th>
+                      <th className="py-1.5 pr-3 font-medium">Nama</th>
+                      <th className="py-1.5 text-right font-medium">Stok Dihitung</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orphanPreview.items.map((item) => (
+                      <tr key={item.itemId} className="border-t border-zinc-50">
+                        <td className="py-1.5 pr-3 font-medium text-green-600">{item.kode}</td>
+                        <td className="py-1.5 pr-3 text-zinc-700">{item.nama}</td>
+                        <td className="py-1.5 text-right font-semibold text-zinc-900">
+                          {item.stok} {item.satuan}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-3 border-t border-zinc-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setOrphanPreview(null)}
+                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
+              >
+                Batal
+              </button>
+              {orphanPreview.count > 0 && (
+                <button
+                  type="button"
+                  disabled={orphanApplying}
+                  onClick={applyRestoreOrphans}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
+                >
+                  {orphanApplying ? "Memulihkan..." : `Munculkan ${orphanPreview.count} Barang`}
                 </button>
               )}
             </div>
