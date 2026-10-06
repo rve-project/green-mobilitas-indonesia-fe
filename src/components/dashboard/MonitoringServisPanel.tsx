@@ -78,7 +78,7 @@ export function MonitoringServisPanel({ invoice, kendaraan }: MonitoringServisPa
       {filtered.length === 0 ? (
         <EmptyState label="Tidak ada servis di kategori ini" />
       ) : (
-        <ul className="space-y-3">
+        <ul className="max-h-80 space-y-3 overflow-y-auto pr-1">
           {filtered.map((inv) => (
             <li key={inv.id}>
               <Link
