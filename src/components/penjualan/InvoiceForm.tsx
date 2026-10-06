@@ -36,6 +36,7 @@ import { RupiahInput } from "@/components/ui/RupiahInput";
 import { DateInput } from "@/components/ui/DateInput";
 import { TambahPelangganModal } from "@/components/pelanggan/TambahPelangganModal";
 import { TambahKendaraanModal } from "@/components/pelanggan/TambahKendaraanModal";
+import { normalizeStatusPekerjaan, STATUS_PEKERJAAN_OPTIONS, StatusPekerjaanCanonical } from "@/lib/statusPekerjaan";
 
 type CatalogTab = "barang" | "jasa" | "paket";
 type CatalogEntry = Barang | Jasa | Paket;
@@ -344,7 +345,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   const [tanggalJatuhTempo, setTanggalJatuhTempo] = useState("");
   const [potonganPersen, setPotonganPersen] = useState("");
   const [bebasPpn, setBebasPpn] = useState(false);
-  const [statusPekerjaan, setStatusPekerjaan] = useState<"selesai" | "belum_selesai">("selesai");
+  const [statusPekerjaan, setStatusPekerjaan] = useState<StatusPekerjaanCanonical>("selesai");
   const [catatan, setCatatan] = useState("");
   const [dibayar, setDibayar] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -366,7 +367,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
       setTanggalJatuhTempo(toDateInputValue(invoice.jatuhTempo));
       setPotonganPersen(invoice.potonganPersen ? String(invoice.potonganPersen) : "");
       setBebasPpn(Boolean(invoice.bebasPpn));
-      setStatusPekerjaan(invoice.statusPekerjaan ?? "selesai");
+      setStatusPekerjaan(normalizeStatusPekerjaan(invoice.statusPekerjaan));
       setCatatan(invoice.catatan ?? "");
       setExistingDibayar(invoice.dibayar);
       setWorkingItems(
@@ -1087,11 +1088,8 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                 <span className="mb-1.5 block text-sm font-medium text-zinc-700">Status Pekerjaan</span>
                 <Select
                   value={statusPekerjaan}
-                  onChange={(v) => setStatusPekerjaan(v as "selesai" | "belum_selesai")}
-                  options={[
-                    { value: "selesai", label: "Selesai" },
-                    { value: "belum_selesai", label: "Belum Selesai (menunggu part/lainnya)" },
-                  ]}
+                  onChange={(v) => setStatusPekerjaan(v as StatusPekerjaanCanonical)}
+                  options={STATUS_PEKERJAAN_OPTIONS}
                 />
               </label>
 

@@ -8,11 +8,7 @@ import { api } from "@/lib/api";
 import { CompanyProfile, Invoice, Kendaraan, Pelanggan } from "@/lib/types";
 import { formatDateFull, formatRupiah } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-
-const STATUS_PEKERJAAN_CONFIG: Record<NonNullable<Invoice["statusPekerjaan"]>, { label: string; className: string }> = {
-  selesai: { label: "Selesai", className: "bg-emerald-50 text-emerald-600" },
-  belum_selesai: { label: "Belum Selesai", className: "bg-amber-50 text-amber-600" },
-};
+import { statusPekerjaanConfig } from "@/lib/statusPekerjaan";
 
 const STATUS_PEMBAYARAN_CONFIG: Record<Invoice["statusPembayaran"], { label: string; className: string }> = {
   belum_dibayar: { label: "Belum Dibayar", className: "bg-red-50 text-red-500" },
@@ -155,7 +151,7 @@ export default function CetakRingkasanPembelianPage() {
                   <td className="px-2 py-1.5">{formatDateFull(inv.tanggal)}</td>
                   <td className="px-2 py-1.5 text-right">{formatRupiah(inv.total)}</td>
                   <td className="px-2 py-1.5">
-                    <Pill {...STATUS_PEKERJAAN_CONFIG[inv.statusPekerjaan ?? "selesai"]} />
+                    <Pill {...statusPekerjaanConfig(inv.statusPekerjaan)} />
                   </td>
                   <td className="px-2 py-1.5">
                     <Pill {...STATUS_PEMBAYARAN_CONFIG[inv.statusPembayaran]} />

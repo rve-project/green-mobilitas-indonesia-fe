@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Car, ClipboardList, PiggyBank, TrendingUp, Trophy, Wallet } from "lucide-react";
 import { api } from "@/lib/api";
-import { Kendaraan, Mekanik, PemasukanLain, Pelanggan, PengeluaranLain, Servis } from "@/lib/types";
+import { Invoice, Kendaraan, Mekanik, PemasukanLain, Pelanggan, PengeluaranLain, Servis } from "@/lib/types";
 import { formatDate, formatRupiah, servisTotal } from "@/lib/format";
 import {
   computeKpis,
@@ -25,6 +25,7 @@ interface RawData {
   kendaraan: Kendaraan[];
   mekanik: Mekanik[];
   servis: Servis[];
+  invoice: Invoice[];
   pemasukanLain: PemasukanLain[];
   pengeluaranLain: PengeluaranLain[];
 }
@@ -41,11 +42,12 @@ export default function Home() {
       api.kendaraan(),
       api.mekanik(),
       api.servis(),
+      api.invoice(),
       api.pemasukanLain(),
       api.pengeluaranLain(),
     ])
-      .then(([pelanggan, kendaraan, mekanik, servis, pemasukanLain, pengeluaranLain]) => {
-        if (!cancelled) setData({ pelanggan, kendaraan, mekanik, servis, pemasukanLain, pengeluaranLain });
+      .then(([pelanggan, kendaraan, mekanik, servis, invoice, pemasukanLain, pengeluaranLain]) => {
+        if (!cancelled) setData({ pelanggan, kendaraan, mekanik, servis, invoice, pemasukanLain, pengeluaranLain });
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);
@@ -143,7 +145,7 @@ export default function Home() {
           <ServisChart data={monthly} />
         </Panel>
 
-        <MonitoringServisPanel servis={data.servis} kendaraan={data.kendaraan} />
+        <MonitoringServisPanel invoice={data.invoice} kendaraan={data.kendaraan} />
       </div>
 
       <div>

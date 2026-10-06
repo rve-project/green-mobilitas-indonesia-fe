@@ -1,29 +1,48 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import clsx from "clsx";
 import { Target } from "lucide-react";
-import { Kendaraan, Servis, StatusServis } from "@/lib/types";
-import { kendaraanLabel } from "@/lib/dashboard";
+import { Invoice, Kendaraan } from "@/lib/types";
 import { EmptyState } from "@/components/ui/Panel";
-
-const TABS: { key: StatusServis; label: string }[] = [
-  { key: "antrian", label: "Antrian" },
-  { key: "dikerjakan", label: "Dikerjakan" },
-  { key: "menunggu_sparepart", label: "Menunggu Sparepart" },
-];
+import {
+  invoiceStatusPekerjaanIs,
+  STATUS_PEKERJAAN_OPTIONS,
+  StatusPekerjaanCanonical,
+} from "@/lib/statusPekerjaan";
 
 interface MonitoringServisPanelProps {
-  servis: Servis[];
+  invoice: Invoice[];
   kendaraan: Kendaraan[];
 }
 
-export function MonitoringServisPanel({ servis, kendaraan }: MonitoringServisPanelProps) {
-  const [tab, setTab] = useState<StatusServis>("antrian");
+function platLabel(inv: Invoice, kendaraan: Kendaraan[]) {
+  return (
+    kendaraan
+      .filter((k) => inv.kendaraanIds?.includes(k.id))
+      .map((k) => k.platNomor)
+      .join(", ") || "-"
+  );
+}
 
-  const filtered = servis
-    .filter((s) => s.status === tab)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+function kendaraanLabel(inv: Invoice, kendaraan: Kendaraan[]) {
+  return kendaraan
+    .filter((k) => inv.kendaraanIds?.includes(k.id))
+    .map((k) => `${k.merk} ${k.model}`)
+    .join(", ");
+}
+
+export function MonitoringServisPanel({ invoice, kendaraan }: MonitoringServisPanelProps) {
+  const [tab, setTab] = useState<StatusPekerjaanCanonical>("antrian");
+
+  // Only real (non-draft, non-dibatalkan) invoices represent an actual job -- a draft isn't
+  // a work order yet, and a cancelled one no longer is one.
+  const jobs = invoice.filter((inv) => inv.status === "selesai");
+
+  const filtered = jobs
+    .filter((inv) => invoiceStatusPekerjaanIs(inv, tab))
+    .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
     .slice(0, 6);
 
   return (
@@ -38,15 +57,15 @@ export function MonitoringServisPanel({ servis, kendaraan }: MonitoringServisPan
         </div>
       </div>
 
-      <div className="mb-4 flex gap-1 border-b border-zinc-100">
-        {TABS.map((t) => (
+      <div className="mb-4 flex flex-wrap gap-1 border-b border-zinc-100">
+        {STATUS_PEKERJAAN_OPTIONS.map((t) => (
           <button
-            key={t.key}
+            key={t.value}
             type="button"
-            onClick={() => setTab(t.key)}
+            onClick={() => setTab(t.value)}
             className={clsx(
               "border-b-2 px-3 pb-2 text-xs font-semibold transition-colors",
-              tab === t.key
+              tab === t.value
                 ? "border-green-600 text-green-600"
                 : "border-transparent text-zinc-400 hover:text-zinc-600"
             )}
@@ -60,12 +79,18 @@ export function MonitoringServisPanel({ servis, kendaraan }: MonitoringServisPan
         <EmptyState label="Tidak ada servis di kategori ini" />
       ) : (
         <ul className="space-y-3">
-          {filtered.map((s) => (
-            <li key={s.id} className="rounded-lg border border-zinc-100 p-3">
-              <p className="text-sm font-medium text-zinc-900">
-                {kendaraanLabel(kendaraan.find((k) => k.id === s.kendaraanId))}
-              </p>
-              <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">{s.keluhan}</p>
+          {filtered.map((inv) => (
+            <li key={inv.id}>
+              <Link
+                href={`/penjualan/faktur/${inv.id}`}
+                className="block rounded-lg border border-zinc-100 p-3 hover:bg-zinc-50"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-zinc-900">{platLabel(inv, kendaraan)}</p>
+                  <span className="shrink-0 text-xs font-semibold text-green-600">{inv.kode}</span>
+                </div>
+                <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">{kendaraanLabel(inv, kendaraan) || "-"}</p>
+              </Link>
             </li>
           ))}
         </ul>

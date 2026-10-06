@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/Select";
 import { SortableTh, SortResetButton } from "@/components/ui/SortableTh";
 import { useSort, compareMulti } from "@/lib/useSort";
 import { DetailInvoiceModal } from "@/components/penjualan/DetailInvoiceModal";
+import { normalizeStatusPekerjaan, STATUS_PEKERJAAN_OPTIONS, StatusPekerjaanCanonical } from "@/lib/statusPekerjaan";
 
 const TABS: { key: StatusInvoice; label: string }[] = [
   { key: "selesai", label: "Faktur" },
@@ -29,25 +30,20 @@ const PERIOD_OPTIONS = [
   { value: 36500, label: "Semua Waktu" },
 ];
 
-const STATUS_PEKERJAAN_OPTIONS = [
-  { value: "selesai", label: "Selesai" },
-  { value: "belum_selesai", label: "Belum Selesai" },
-];
-
 function StatusPekerjaanSelect({
   status,
   onChange,
 }: {
   status: Invoice["statusPekerjaan"];
-  onChange: (value: "selesai" | "belum_selesai") => void;
+  onChange: (value: StatusPekerjaanCanonical) => void;
 }) {
   return (
     <div className="relative">
       <Select
-        value={status ?? "selesai"}
-        onChange={(v) => onChange(v as "selesai" | "belum_selesai")}
+        value={normalizeStatusPekerjaan(status)}
+        onChange={(v) => onChange(v as StatusPekerjaanCanonical)}
         options={STATUS_PEKERJAAN_OPTIONS}
-        className="w-40"
+        className="w-44"
       />
     </div>
   );
@@ -90,7 +86,7 @@ export default function FakturPenjualanPage() {
   const [pageSize, setPageSize] = useState(10);
   const { criteria, toggleSort, resetSort, isDefault } = useSort<SortKey>("kode", "asc");
 
-  async function handleStatusPekerjaanChange(id: string, value: "selesai" | "belum_selesai") {
+  async function handleStatusPekerjaanChange(id: string, value: StatusPekerjaanCanonical) {
     const previous = invoice?.find((inv) => inv.id === id)?.statusPekerjaan;
     setInvoice((prev) => prev?.map((inv) => (inv.id === id ? { ...inv, statusPekerjaan: value } : inv)) ?? null);
     try {
@@ -119,9 +115,11 @@ export default function FakturPenjualanPage() {
       .map((k) => k.platNomor)
       .join(", ");
 
-  const STATUS_PEKERJAAN_ORDER: Record<NonNullable<Invoice["statusPekerjaan"]>, number> = {
-    belum_selesai: 0,
-    selesai: 1,
+  const STATUS_PEKERJAAN_ORDER: Record<StatusPekerjaanCanonical, number> = {
+    antrian: 0,
+    dikerjakan: 1,
+    menunggu_sparepart: 2,
+    selesai: 3,
   };
   const STATUS_PEMBAYARAN_ORDER: Record<Invoice["statusPembayaran"], number> = {
     belum_dibayar: 0,
@@ -144,7 +142,7 @@ export default function FakturPenjualanPage() {
       case "total":
         return inv.total;
       case "statusPekerjaan":
-        return STATUS_PEKERJAAN_ORDER[inv.statusPekerjaan ?? "selesai"];
+        return STATUS_PEKERJAAN_ORDER[normalizeStatusPekerjaan(inv.statusPekerjaan)];
       case "statusPembayaran":
         return STATUS_PEMBAYARAN_ORDER[inv.statusPembayaran];
     }

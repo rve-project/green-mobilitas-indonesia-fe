@@ -32,6 +32,7 @@ import { Invoice, Jasa, Kendaraan, Lookup, Pelanggan, Pembayaran } from "@/lib/t
 import { formatDateFull, formatRupiah, hitungTotalSetelahDiskon, labelDiskon } from "@/lib/format";
 import { Select } from "@/components/ui/Select";
 import { RupiahInput } from "@/components/ui/RupiahInput";
+import { statusPekerjaanConfig } from "@/lib/statusPekerjaan";
 
 const METODE_PEMBAYARAN_OPTIONS = [
   { value: "Cash", label: "Cash" },
@@ -55,10 +56,6 @@ const STATUS_CONFIG: Record<Invoice["status"], { label: string; className: strin
   dibatalkan: { label: "Dibatalkan", className: "bg-red-50 text-red-500" },
 };
 
-const STATUS_PEKERJAAN_CONFIG: Record<NonNullable<Invoice["statusPekerjaan"]>, { label: string; className: string }> = {
-  selesai: { label: "Pekerjaan Selesai", className: "bg-emerald-50 text-emerald-600" },
-  belum_selesai: { label: "Pekerjaan Belum Selesai", className: "bg-amber-50 text-amber-600" },
-};
 
 const STATUS_PEMBAYARAN_CONFIG: Record<Invoice["statusPembayaran"], { label: string; className: string }> = {
   belum_dibayar: { label: "Belum Dibayar", className: "text-red-500" },
@@ -314,10 +311,10 @@ export function DetailInvoiceModal({
               <span
                 className={clsx(
                   "rounded-full px-2.5 py-1 text-xs font-semibold",
-                  STATUS_PEKERJAAN_CONFIG[invoice.statusPekerjaan ?? "selesai"].className
+                  statusPekerjaanConfig(invoice.statusPekerjaan).className
                 )}
               >
-                {STATUS_PEKERJAAN_CONFIG[invoice.statusPekerjaan ?? "selesai"].label}
+                {statusPekerjaanConfig(invoice.statusPekerjaan).label}
               </span>
             )}
           </div>

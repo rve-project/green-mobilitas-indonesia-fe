@@ -14,11 +14,7 @@ import { EmptyState } from "@/components/ui/Panel";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { TambahPelangganModal } from "@/components/pelanggan/TambahPelangganModal";
 import { TambahKendaraanModal } from "@/components/pelanggan/TambahKendaraanModal";
-
-const STATUS_PEKERJAAN_CONFIG: Record<NonNullable<Invoice["statusPekerjaan"]>, { label: string; className: string }> = {
-  selesai: { label: "Selesai", className: "bg-emerald-50 text-emerald-600" },
-  belum_selesai: { label: "Belum Selesai", className: "bg-amber-50 text-amber-600" },
-};
+import { statusPekerjaanConfig } from "@/lib/statusPekerjaan";
 
 const STATUS_PEMBAYARAN_CONFIG: Record<Invoice["statusPembayaran"], { label: string; className: string }> = {
   belum_dibayar: { label: "Belum", className: "bg-red-50 text-red-500" },
@@ -314,7 +310,7 @@ export default function PelangganDetailPage() {
                       <td className="px-4 py-3 text-zinc-500">{formatDateLong(inv.tanggal)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-zinc-900">{formatRupiah(inv.total)}</td>
                       <td className="px-4 py-3">
-                        <Pill {...STATUS_PEKERJAAN_CONFIG[inv.statusPekerjaan ?? "selesai"]} />
+                        <Pill {...statusPekerjaanConfig(inv.statusPekerjaan)} />
                       </td>
                       <td className="px-4 py-3">
                         <Pill {...STATUS_PEMBAYARAN_CONFIG[inv.statusPembayaran]} />
