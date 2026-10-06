@@ -132,21 +132,18 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Panel
-          title={
-            <>
-              <TrendingUp className="h-4 w-4 text-green-600" />
-              Statistik Servis Bulanan
-            </>
-          }
-          className="lg:col-span-2"
-        >
-          <ServisChart data={monthly} />
-        </Panel>
+      <Panel
+        title={
+          <>
+            <TrendingUp className="h-4 w-4 text-green-600" />
+            Statistik Servis Bulanan
+          </>
+        }
+      >
+        <ServisChart data={monthly} />
+      </Panel>
 
-        <MonitoringServisPanel invoice={data.invoice} kendaraan={data.kendaraan} />
-      </div>
+      <MonitoringServisPanel invoice={data.invoice} kendaraan={data.kendaraan} />
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-zinc-900">Ringkasan Operasional</h2>

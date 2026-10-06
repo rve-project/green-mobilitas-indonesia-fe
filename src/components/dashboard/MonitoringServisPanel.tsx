@@ -6,11 +6,14 @@ import clsx from "clsx";
 import { Target } from "lucide-react";
 import { Invoice, Kendaraan } from "@/lib/types";
 import { EmptyState } from "@/components/ui/Panel";
+import { Pagination, paginate } from "@/components/ui/Pagination";
 import {
   invoiceStatusPekerjaanIs,
   STATUS_PEKERJAAN_OPTIONS,
   StatusPekerjaanCanonical,
 } from "@/lib/statusPekerjaan";
+
+const PAGE_SIZE = 6;
 
 interface MonitoringServisPanelProps {
   invoice: Invoice[];
@@ -35,6 +38,12 @@ function kendaraanLabel(inv: Invoice, kendaraan: Kendaraan[]) {
 
 export function MonitoringServisPanel({ invoice, kendaraan }: MonitoringServisPanelProps) {
   const [tab, setTab] = useState<StatusPekerjaanCanonical>("antrian");
+  const [page, setPage] = useState(1);
+
+  function selectTab(next: StatusPekerjaanCanonical) {
+    setTab(next);
+    setPage(1);
+  }
 
   // Only real (non-draft, non-dibatalkan) invoices represent an actual job -- a draft isn't
   // a work order yet, and a cancelled one no longer is one.
@@ -42,8 +51,8 @@ export function MonitoringServisPanel({ invoice, kendaraan }: MonitoringServisPa
 
   const filtered = jobs
     .filter((inv) => invoiceStatusPekerjaanIs(inv, tab))
-    .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
-    .slice(0, 6);
+    .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+  const paged = paginate(filtered, page, PAGE_SIZE);
 
   return (
     <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -62,7 +71,7 @@ export function MonitoringServisPanel({ invoice, kendaraan }: MonitoringServisPa
           <button
             key={t.value}
             type="button"
-            onClick={() => setTab(t.value)}
+            onClick={() => selectTab(t.value)}
             className={clsx(
               "border-b-2 px-3 pb-2 text-xs font-semibold transition-colors",
               tab === t.value
@@ -78,22 +87,25 @@ export function MonitoringServisPanel({ invoice, kendaraan }: MonitoringServisPa
       {filtered.length === 0 ? (
         <EmptyState label="Tidak ada servis di kategori ini" />
       ) : (
-        <ul className="max-h-80 space-y-3 overflow-y-auto pr-1">
-          {filtered.map((inv) => (
-            <li key={inv.id}>
-              <Link
-                href={`/penjualan/faktur/${inv.id}`}
-                className="block rounded-lg border border-zinc-100 p-3 hover:bg-zinc-50"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-zinc-900">{platLabel(inv, kendaraan)}</p>
-                  <span className="shrink-0 text-xs font-semibold text-green-600">{inv.kode}</span>
-                </div>
-                <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">{kendaraanLabel(inv, kendaraan) || "-"}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {paged.map((inv) => (
+              <li key={inv.id}>
+                <Link
+                  href={`/penjualan/faktur/${inv.id}`}
+                  className="block rounded-lg border border-zinc-100 p-3 hover:bg-zinc-50"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-zinc-900">{platLabel(inv, kendaraan)}</p>
+                    <span className="shrink-0 text-xs font-semibold text-green-600">{inv.kode}</span>
+                  </div>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">{kendaraanLabel(inv, kendaraan) || "-"}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filtered.length} onPageChange={setPage} onPageSizeChange={() => {}} pageSizeOptions={[PAGE_SIZE]} />
+        </>
       )}
     </section>
   );
