@@ -1,8 +1,14 @@
 import { Invoice, StatusPekerjaan } from "@/lib/types";
 
-/** The four real statuses a job can be in. Legacy "belum_selesai" (see the StatusPekerjaan
+/** The five real statuses a job can be in. Legacy "belum_selesai" (see the StatusPekerjaan
  * type) is never offered here -- it's only ever read, normalized to "antrian". */
-export const STATUS_PEKERJAAN_VALUES = ["antrian", "dikerjakan", "menunggu_sparepart", "selesai"] as const;
+export const STATUS_PEKERJAAN_VALUES = [
+  "antrian",
+  "dikerjakan",
+  "menunggu_sparepart",
+  "selesai",
+  "diterima_customer",
+] as const;
 export type StatusPekerjaanCanonical = (typeof STATUS_PEKERJAAN_VALUES)[number];
 
 export const STATUS_PEKERJAAN_OPTIONS: { value: StatusPekerjaanCanonical; label: string }[] = [
@@ -10,6 +16,7 @@ export const STATUS_PEKERJAAN_OPTIONS: { value: StatusPekerjaanCanonical; label:
   { value: "dikerjakan", label: "Dikerjakan" },
   { value: "menunggu_sparepart", label: "Menunggu Sparepart" },
   { value: "selesai", label: "Selesai" },
+  { value: "diterima_customer", label: "Diterima Customer" },
 ];
 
 export const STATUS_PEKERJAAN_CONFIG: Record<StatusPekerjaanCanonical, { label: string; className: string }> = {
@@ -17,6 +24,7 @@ export const STATUS_PEKERJAAN_CONFIG: Record<StatusPekerjaanCanonical, { label: 
   dikerjakan: { label: "Dikerjakan", className: "bg-blue-50 text-blue-600" },
   menunggu_sparepart: { label: "Menunggu Sparepart", className: "bg-amber-50 text-amber-600" },
   selesai: { label: "Selesai", className: "bg-emerald-50 text-emerald-600" },
+  diterima_customer: { label: "Diterima Customer", className: "bg-violet-50 text-violet-600" },
 };
 
 /** Old invoices only ever had "selesai" | "belum_selesai" -- undefined (never touched) and

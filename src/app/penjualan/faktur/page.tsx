@@ -120,6 +120,7 @@ export default function FakturPenjualanPage() {
     dikerjakan: 1,
     menunggu_sparepart: 2,
     selesai: 3,
+    diterima_customer: 4,
   };
   const STATUS_PEMBAYARAN_ORDER: Record<Invoice["statusPembayaran"], number> = {
     belum_dibayar: 0,
