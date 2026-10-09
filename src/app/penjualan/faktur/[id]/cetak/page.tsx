@@ -149,10 +149,17 @@ function A4Document({
 
       <div className="relative flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-green.png" alt="Logo" className="h-24 w-24 object-contain" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-vinfast.png" alt="Vinfast" className="h-12 w-12 object-contain" />
+          {/* The two logos are bottom-aligned to each other (items-end on their own sub-row)
+              instead of items-center against this row's own cross-axis -- GMI's glyph only
+              fills ~half of its h-24 box height (it's a wide, short mark) while Vinfast's
+              nearly fills its h-12 box, so centering each independently within the row left
+              them sitting at visibly different heights instead of sharing a baseline. */}
+          <div className="flex shrink-0 items-end gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-gmi-green.png" alt="Logo" className="h-24 w-24 object-contain" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-vinfast.png" alt="Vinfast" className="h-12 w-12 object-contain" />
+          </div>
           <div>
             <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
             <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
@@ -325,8 +332,11 @@ function DotMatrixDocument({
             <p className="mt-0.5 text-[9px] text-zinc-600">Invoice ini bersifat proforma (specimen), belum dibayarkan.</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Flat black silhouette, not the chrome/gradient original -- a dot-matrix
+        <div className="flex items-end gap-2">
+          {/* items-end: GMI's glyph is a wide, short mark that only fills part of its own
+              box height, while Vinfast's nearly fills its box -- items-center left them
+              sitting at different heights instead of sharing a bottom edge.
+              Flat black silhouette, not the chrome/gradient original -- a dot-matrix
               printer can't render gradients (see the component doc comment above about
               /logo-gmi-mono.png). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
