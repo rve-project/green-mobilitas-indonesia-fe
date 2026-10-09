@@ -152,7 +152,7 @@ function A4Document({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-gmi-green.png" alt="Logo" className="h-24 w-24 object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-vinfast.png" alt="Vinfast" className="h-16 w-16 object-contain" />
+          <img src="/logo-vinfast.png" alt="Vinfast" className="h-12 w-12 object-contain" />
           <div>
             <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
             <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
@@ -330,7 +330,7 @@ function DotMatrixDocument({
               printer can't render gradients (see the component doc comment above about
               /logo-gmi-mono.png). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-10 w-10 shrink-0 object-contain" />
+          <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-6 w-6 shrink-0 object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 shrink-0 object-contain" />
         </div>
