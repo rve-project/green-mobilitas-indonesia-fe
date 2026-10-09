@@ -335,6 +335,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   const [showTambahPelanggan, setShowTambahPelanggan] = useState(false);
   const [kendaraanIds, setKendaraanIds] = useState<string[]>([]);
   const [kendaraanPickerOpen, setKendaraanPickerOpen] = useState(false);
+  const [kendaraanQuery, setKendaraanQuery] = useState("");
   const [showTambahKendaraan, setShowTambahKendaraan] = useState(false);
   const kendaraanPickerRef = useRef<HTMLDivElement>(null);
   const [keluhan, setKeluhan] = useState("");
@@ -401,6 +402,10 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!kendaraanPickerOpen) setKendaraanQuery("");
+  }, [kendaraanPickerOpen]);
+
   // Starts with no vehicle checked -- auto-checking every one of the customer's vehicles
   // used to be the default, but for customers with a large fleet that meant unchecking
   // dozens of plates by hand for every invoice that only covers one or two of them.
@@ -424,6 +429,12 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   }
 
   const kendaraanMilikPelanggan = kendaraanList.filter((k) => k.pelangganId === pelangganId);
+  const kendaraanQueryLower = kendaraanQuery.trim().toLowerCase();
+  const kendaraanMilikPelangganFiltered = kendaraanQueryLower
+    ? kendaraanMilikPelanggan.filter((k) =>
+        `${k.platNomor} ${k.merk} ${k.model}`.toLowerCase().includes(kendaraanQueryLower)
+      )
+    : kendaraanMilikPelanggan;
   const pelangganTerpilih = pelangganList.find((p) => p.id === pelangganId);
   const kendaraanTerpilihList = kendaraanList.filter((k) => kendaraanIds.includes(k.id));
 
@@ -901,11 +912,25 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                 </button>
                 {kendaraanPickerOpen && (
                   <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white p-2 shadow-lg">
+                    {kendaraanMilikPelanggan.length > 0 && (
+                      <div className="relative mb-2">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                        <input
+                          autoFocus
+                          value={kendaraanQuery}
+                          onChange={(e) => setKendaraanQuery(e.target.value)}
+                          placeholder="Cari plat nomor / merk / model..."
+                          className="w-full rounded-md border border-zinc-200 py-1.5 pl-8 pr-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                    )}
                     <div className="max-h-64 overflow-y-auto">
                       {kendaraanMilikPelanggan.length === 0 ? (
                         <p className="px-2 py-1.5 text-sm text-zinc-400">Pelanggan ini belum punya kendaraan terdaftar</p>
+                      ) : kendaraanMilikPelangganFiltered.length === 0 ? (
+                        <p className="px-2 py-1.5 text-sm text-zinc-400">Tidak ditemukan</p>
                       ) : (
-                        kendaraanMilikPelanggan.map((k) => (
+                        kendaraanMilikPelangganFiltered.map((k) => (
                           <label key={k.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-zinc-50">
                             <input
                               type="checkbox"

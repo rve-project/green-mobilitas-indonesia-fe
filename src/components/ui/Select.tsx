@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import clsx from "clsx";
 
-const SEARCH_THRESHOLD = 6;
-
 export interface SelectOption {
   value: string;
   label: string;
@@ -49,13 +47,16 @@ export function Select({
 
   useEffect(() => {
     if (!open) setQuery("");
-    else searchRef.current?.focus();
+    // preventScroll: a plain .focus() makes the browser scroll the search input into
+    // view on whatever ancestor it thinks is scrollable -- including the whole page,
+    // not just this dropdown's own scroll container -- which yanks the page sideways
+    // whenever a dropdown opens near the edge of a wide table.
+    else searchRef.current?.focus({ preventScroll: true });
   }, [open]);
 
   const selected = options.find((o) => o.value === value);
-  const showSearch = options.length > SEARCH_THRESHOLD;
   const q = query.trim().toLowerCase();
-  const filteredOptions = showSearch && q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
+  const filteredOptions = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
 
   return (
     <div ref={containerRef} className={clsx("relative", className)}>
@@ -77,18 +78,16 @@ export function Select({
 
       {open && (
         <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
-          {showSearch && (
-            <div className="relative border-b border-zinc-100 p-1.5">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-              <input
-                ref={searchRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Cari..."
-                className="w-full rounded-md border border-zinc-200 py-1.5 pl-8 pr-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-              />
-            </div>
-          )}
+          <div className="relative border-b border-zinc-100 p-1.5">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari..."
+              className="w-full rounded-md border border-zinc-200 py-1.5 pl-8 pr-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+            />
+          </div>
           <div className="max-h-56 overflow-y-auto py-1">
             {filteredOptions.length === 0 ? (
               <p className="px-3 py-2 text-sm text-zinc-400">

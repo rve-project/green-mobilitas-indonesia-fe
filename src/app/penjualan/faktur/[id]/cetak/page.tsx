@@ -151,6 +151,8 @@ function A4Document({
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-gmi-green.png" alt="Logo" className="h-24 w-24 object-contain" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-vinfast.png" alt="Vinfast" className="h-16 w-16 object-contain" />
           <div>
             <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
             <p className="mt-1 text-[11px] text-zinc-500">{profile.alamat}</p>
@@ -323,8 +325,15 @@ function DotMatrixDocument({
             <p className="mt-0.5 text-[9px] text-zinc-600">Invoice ini bersifat proforma (specimen), belum dibayarkan.</p>
           )}
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 object-contain" />
+        <div className="flex items-center gap-2">
+          {/* Flat black silhouette, not the chrome/gradient original -- a dot-matrix
+              printer can't render gradients (see the component doc comment above about
+              /logo-gmi-mono.png). */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-10 w-10 object-contain" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 object-contain" />
+        </div>
       </div>
 
       <div className="my-2 border-t border-black" />
