@@ -156,7 +156,7 @@ function A4Document({
               them sitting at visibly different heights instead of sharing a baseline. */}
           <div className="flex shrink-0 items-end gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-gmi-green.png" alt="Logo" className="h-24 w-24 object-contain" />
+            <img src="/logo-gmi-green.png?v=2" alt="Logo" className="h-24 w-24 object-contain" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-vinfast.png" alt="Vinfast" className="h-12 w-12 object-contain" />
           </div>
@@ -342,7 +342,7 @@ function DotMatrixDocument({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-6 w-6 shrink-0 object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 shrink-0 object-contain" />
+          <img src="/logo-gmi-mono.png?v=2" alt="Logo" className="h-10 w-10 shrink-0 object-contain" />
         </div>
       </div>
 
