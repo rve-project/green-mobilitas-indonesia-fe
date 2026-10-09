@@ -149,16 +149,17 @@ function A4Document({
 
       <div className="relative flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          {/* The two logos are bottom-aligned to each other (items-end on their own sub-row)
-              instead of items-center against this row's own cross-axis -- GMI's glyph only
-              fills ~half of its h-24 box height (it's a wide, short mark) while Vinfast's
-              nearly fills its h-12 box, so centering each independently within the row left
-              them sitting at visibly different heights instead of sharing a baseline. */}
+          {/* Bottom-aligned (items-end on their own sub-row) instead of centered against this
+              row's cross-axis. w-auto (not a fixed square w-24/w-12) matters just as much as
+              that: GMI's glyph is wide (~1.8:1), so forcing it into a square box would
+              letterbox it with empty space top and bottom even post-crop, and items-end would
+              then align the EMPTY BOX's bottom, not the glyph's -- Vinfast (~1:1, no
+              letterboxing at any box size) would still end up visibly lower than GMI's ink. */}
           <div className="flex shrink-0 items-end gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-gmi-green.png?v=2" alt="Logo" className="h-24 w-24 object-contain" />
+            <img src="/logo-gmi-green.png?v=2" alt="Logo" className="h-24 w-auto object-contain" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-vinfast.png" alt="Vinfast" className="h-12 w-12 object-contain" />
+            <img src="/logo-vinfast.png" alt="Vinfast" className="h-12 w-auto object-contain" />
           </div>
           <div>
             <p className="text-lg font-bold leading-none text-zinc-900">{profile.namaPerusahaan}</p>
@@ -333,16 +334,17 @@ function DotMatrixDocument({
           )}
         </div>
         <div className="flex items-end gap-2">
-          {/* items-end: GMI's glyph is a wide, short mark that only fills part of its own
-              box height, while Vinfast's nearly fills its box -- items-center left them
-              sitting at different heights instead of sharing a bottom edge.
+          {/* items-end + w-auto (not a fixed square w-6/w-10): GMI's glyph is wide (~1.8:1),
+              so a square box would letterbox it with empty space top/bottom even post-crop --
+              items-end would then align the EMPTY BOX's bottom, not the glyph's, leaving
+              Vinfast's (~1:1, no letterboxing) ink visibly lower than GMI's.
               Flat black silhouette, not the chrome/gradient original -- a dot-matrix
               printer can't render gradients (see the component doc comment above about
               /logo-gmi-mono.png). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-6 w-6 shrink-0 object-contain" />
+          <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-6 w-auto shrink-0 object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-mono.png?v=2" alt="Logo" className="h-10 w-10 shrink-0 object-contain" />
+          <img src="/logo-gmi-mono.png?v=2" alt="Logo" className="h-10 w-auto shrink-0 object-contain" />
         </div>
       </div>
 
