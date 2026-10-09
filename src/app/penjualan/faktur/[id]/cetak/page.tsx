@@ -330,9 +330,9 @@ function DotMatrixDocument({
               printer can't render gradients (see the component doc comment above about
               /logo-gmi-mono.png). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-10 w-10 object-contain" />
+          <img src="/logo-vinfast-mono.png" alt="Vinfast" className="h-10 w-10 shrink-0 object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 object-contain" />
+          <img src="/logo-gmi-mono.png" alt="Logo" className="h-10 w-10 shrink-0 object-contain" />
         </div>
       </div>
 
