@@ -14,6 +14,7 @@ import {
 import {
   Barang,
   Invoice,
+  Kendaraan,
   Lokasi,
   PemasukanLain,
   PengeluaranBarang,
@@ -84,6 +85,14 @@ export interface LaporanDataset {
   barangMap: Map<string, Barang>;
   invoiceKodeMap: Map<string, string>;
   pembelianKodeMap: Map<string, string>;
+  kendaraanMap: Map<string, Kendaraan>;
+}
+
+/** Comma-joined plate numbers for an invoice's linked vehicles (kendaraanIds is an
+ * array -- one sale can cover more than one vehicle), or "-" when none are linked. */
+function platNomorFor(i: Invoice, kendaraanMap: Map<string, Kendaraan>): string {
+  const plates = (i.kendaraanIds ?? []).map((kid) => kendaraanMap.get(kid)?.platNomor).filter((p): p is string => Boolean(p));
+  return plates.length ? plates.join(", ") : "-";
 }
 
 function humanize(s: string) {
@@ -122,11 +131,13 @@ export function computeReport(
           { label: "Total Dibayar", value: formatRupiah(totalDibayar) },
           { label: "Outstanding", value: formatRupiah(Math.max(0, totalOmzet - totalDibayar)) },
         ],
-        columns: ["Kode", "Tanggal", "Pelanggan", "Total", "Dibayar", "Status"],
+        columns: ["Kode", "Tanggal", "Pelanggan", "Plat Nomor", "Status Pengerjaan", "Total", "Dibayar", "Status"],
         rows: rows.map((i) => [
           i.kode,
           formatDate(i.tanggal),
           d.pelangganMap.get(i.pelangganId) ?? "-",
+          platNomorFor(i, d.kendaraanMap),
+          i.statusPekerjaan ? humanize(i.statusPekerjaan) : "-",
           formatRupiah(i.total),
           formatRupiah(i.dibayar),
           humanize(i.statusPembayaran),
@@ -396,6 +407,7 @@ export async function fetchLaporanDataset(api: typeof import("./api").api): Prom
     supplier,
     barangRes,
     lokasiList,
+    kendaraan,
   ] = await Promise.all([
     api.invoice(),
     api.pembelian(),
@@ -410,6 +422,7 @@ export async function fetchLaporanDataset(api: typeof import("./api").api): Prom
     api.supplier(),
     api.barang({ limit: 1000 }),
     api.lokasi(),
+    api.kendaraan(),
   ]);
 
   return {
@@ -429,5 +442,6 @@ export async function fetchLaporanDataset(api: typeof import("./api").api): Prom
     barangMap: new Map(barangRes.data.map((b) => [b.id, b])),
     invoiceKodeMap: new Map(invoice.map((i) => [i.id, i.kode])),
     pembelianKodeMap: new Map(pembelian.map((p) => [p.id, p.kode])),
+    kendaraanMap: new Map(kendaraan.map((k) => [k.id, k])),
   };
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
-import { ArrowLeft, Ban, CheckCircle2, Pencil, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, Pencil, Printer, Search, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
 import { Invoice, Kendaraan, Pelanggan } from "@/lib/types";
@@ -34,6 +34,7 @@ export default function PelangganDetailPage() {
   const [riwayatPageSize, setRiwayatPageSize] = useState(5);
   const [kendaraanPage, setKendaraanPage] = useState(1);
   const [kendaraanPageSize, setKendaraanPageSize] = useState(10);
+  const [kendaraanSearch, setKendaraanSearch] = useState("");
 
   const [editOpen, setEditOpen] = useState(false);
   const [kendaraanModal, setKendaraanModal] = useState<{ open: boolean; edit?: Kendaraan }>({ open: false });
@@ -54,6 +55,13 @@ export default function PelangganDetailPage() {
   }, [id]);
 
   const kendaraanMilik = useMemo(() => kendaraan.filter((k) => k.pelangganId === id), [kendaraan, id]);
+  const kendaraanTersaring = useMemo(() => {
+    const q = kendaraanSearch.trim().toLowerCase();
+    if (!q) return kendaraanMilik;
+    return kendaraanMilik.filter((k) =>
+      [k.platNomor, k.merk, k.model, k.tipe].some((field) => field?.toLowerCase().includes(q))
+    );
+  }, [kendaraanMilik, kendaraanSearch]);
   const invoiceMilik = useMemo(
     () =>
       invoice
@@ -193,21 +201,37 @@ export default function PelangganDetailPage() {
       <Section
         title="Kendaraan"
         action={
-          <button
-            type="button"
-            onClick={() => setKendaraanModal({ open: true })}
-            className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700"
-          >
-            Tambah Kendaraan
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+              <input
+                value={kendaraanSearch}
+                onChange={(e) => {
+                  setKendaraanSearch(e.target.value);
+                  setKendaraanPage(1);
+                }}
+                placeholder="Cari plat nomor/merk/model..."
+                className="w-56 rounded-lg border border-zinc-200 py-1.5 pl-8 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setKendaraanModal({ open: true })}
+              className="whitespace-nowrap rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700"
+            >
+              Tambah Kendaraan
+            </button>
+          </div>
         }
       >
         {kendaraanMilik.length === 0 ? (
           <EmptyState label="Belum ada kendaraan" />
+        ) : kendaraanTersaring.length === 0 ? (
+          <EmptyState label="Tidak ada kendaraan yang cocok dengan pencarian" />
         ) : (
           <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {paginate(kendaraanMilik, kendaraanPage, kendaraanPageSize).map((k) => (
+            {paginate(kendaraanTersaring, kendaraanPage, kendaraanPageSize).map((k) => (
               <div
                 key={k.id}
                 className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3"
@@ -245,7 +269,7 @@ export default function PelangganDetailPage() {
           <Pagination
             page={kendaraanPage}
             pageSize={kendaraanPageSize}
-            totalItems={kendaraanMilik.length}
+            totalItems={kendaraanTersaring.length}
             onPageChange={setKendaraanPage}
             onPageSizeChange={(size) => {
               setKendaraanPageSize(size);
