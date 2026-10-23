@@ -76,7 +76,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar onMenuClick={() => setMobileNavOpen(true)} />
-        <main className="flex flex-1 flex-col overflow-x-hidden">{children}</main>
+        {/* overflow-x-hidden alone computes overflow-y to "auto" per the CSS spec (one
+            axis non-visible forces the other to auto), and combined with the min-h-full/
+            min-h-screen flex chain above, that gives `main` a DEFINITE height equal to the
+            viewport -- fine for the normal dashboard (content scrolls, sidebar stays put),
+            but it also clips/cuts off anything printed from inside it, since the print
+            engine renders the box at that fixed height instead of letting content flow
+            across pages. Reset both for print so a page's @page/print CSS can paginate the
+            full content instead of just whatever fit in one viewport-height. */}
+        <main className="flex flex-1 flex-col overflow-x-hidden print:h-auto print:overflow-visible">{children}</main>
       </div>
     </div>
   );

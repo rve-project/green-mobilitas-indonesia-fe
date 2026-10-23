@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Shared by every /cetak print page (customer summary, sales/purchase invoices, sales
+   report) -- without these, printed output commonly (a) loses all background colors
+   (status pills, the green table header bar) since browsers don't print backgrounds by
+   default unless told to, and (b) splits a table row's cells across two physical pages
+   whenever a page boundary happens to fall mid-row. */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  table tr {
+    break-inside: avoid;
+  }
+}
