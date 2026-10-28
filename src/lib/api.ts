@@ -301,6 +301,7 @@ export const api = {
     catatan?: string;
     keluhan?: string;
     potonganPersen?: number;
+    potonganRp?: number;
     bebasPpn?: boolean;
     status?: Invoice["status"];
     statusPekerjaan?: Invoice["statusPekerjaan"];
@@ -331,6 +332,7 @@ export const api = {
       catatan?: string;
       keluhan?: string;
       potonganPersen?: number;
+      potonganRp?: number;
       bebasPpn?: boolean;
       items?: {
         tipe: "barang" | "jasa";
@@ -402,6 +404,7 @@ export const api = {
     noInvoiceSupplier?: string;
     catatan?: string;
     potonganPersen?: number;
+    potonganRp?: number;
     biayaPengiriman?: number;
     biayaLainnya?: number;
     bebasPpn?: boolean;
@@ -431,6 +434,7 @@ export const api = {
       noInvoiceSupplier?: string;
       catatan?: string;
       potonganPersen?: number;
+      potonganRp?: number;
       biayaPengiriman?: number;
       biayaLainnya?: number;
       bebasPpn?: boolean;

@@ -224,6 +224,7 @@ export interface Invoice {
   keluhan?: string;
   items: InvoiceItem[];
   potonganPersen?: number;
+  potonganRp?: number;
   subtotal?: number;
   dpp?: number;
   bebasPpn?: boolean;
@@ -314,6 +315,7 @@ export interface Pembelian {
   catatanPembayaran?: string;
   items: PembelianItem[];
   potonganPersen?: number;
+  potonganRp?: number;
   subtotal?: number;
   dpp?: number;
   bebasPpn?: boolean;

@@ -345,6 +345,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   const [metodePembayaran, setMetodePembayaran] = useState("");
   const [tanggalJatuhTempo, setTanggalJatuhTempo] = useState("");
   const [potonganPersen, setPotonganPersen] = useState("");
+  const [potonganRp, setPotonganRp] = useState("");
   const [bebasPpn, setBebasPpn] = useState(false);
   const [statusPekerjaan, setStatusPekerjaan] = useState<StatusPekerjaanCanonical>("selesai");
   const [catatan, setCatatan] = useState("");
@@ -367,6 +368,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
       setMetodePembayaran(invoice.metodePembayaran ?? "");
       setTanggalJatuhTempo(toDateInputValue(invoice.jatuhTempo));
       setPotonganPersen(invoice.potonganPersen ? String(invoice.potonganPersen) : "");
+      setPotonganRp(invoice.potonganRp ? String(invoice.potonganRp) : "");
       setBebasPpn(Boolean(invoice.bebasPpn));
       setStatusPekerjaan(normalizeStatusPekerjaan(invoice.statusPekerjaan));
       setCatatan(invoice.catatan ?? "");
@@ -439,7 +441,8 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   const kendaraanTerpilihList = kendaraanList.filter((k) => kendaraanIds.includes(k.id));
 
   const potongan = Number(potonganPersen) || 0;
-  const dpp = subtotal * (1 - potongan / 100);
+  const potonganNominal = Number(potonganRp) || 0;
+  const dpp = Math.max(subtotal * (1 - potongan / 100) - potonganNominal, 0);
   const pajakPersenEfektif = !bebasPpn && pajakSetting.aktif ? pajakSetting.persentase : 0;
   const pajakNominal = roundToNearest(dpp * (pajakPersenEfektif / 100), pajakSetting.pembulatan);
   const totalInvoice = dpp + pajakNominal;
@@ -472,6 +475,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
           keluhan: keluhan || undefined,
           kilometer: Number(kilometer) || undefined,
           potonganPersen: potongan || undefined,
+          potonganRp: potonganNominal || undefined,
           bebasPpn,
           statusPekerjaan,
           items,
@@ -491,6 +495,7 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
         keluhan: keluhan || undefined,
         kilometer: Number(kilometer) || undefined,
         potonganPersen: potongan || undefined,
+        potonganRp: potonganNominal || undefined,
         bebasPpn,
         statusPekerjaan,
         dibayar: Number(dibayar) || 0,
@@ -1081,21 +1086,34 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
               <p className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
                 <Settings2 className="h-4 w-4 text-zinc-500" /> Pengaturan Tambahan
               </p>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-zinc-700">Potongan Global</span>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={potonganPersen}
-                    onChange={(e) => setPotonganPersen(e.target.value)}
-                    placeholder="Masukkan %"
-                    className={`${inputClass} pr-8`}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium text-zinc-700">Potongan Global (%)</span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={potonganPersen}
+                      onChange={(e) => setPotonganPersen(e.target.value)}
+                      placeholder="0-100"
+                      className={`${inputClass} pr-8`}
+                    />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium text-zinc-700">Potongan Global (Rp)</span>
+                  <RupiahInput
+                    value={potonganRp}
+                    onChange={setPotonganRp}
+                    placeholder="Contoh: 50.000"
+                    className={inputClass}
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
-                </div>
-              </label>
+                </label>
+              </div>
+              {/* Keduanya boleh diisi sekaligus: persen dihitung dulu dari subtotal, baru
+                  nominal rupiah dikurangkan dari hasilnya -- sama seperti Retur Penjualan. */}
 
               {pajakSetting.aktif && (
                 <label className="flex items-center gap-2 border-t border-zinc-100 pt-3 text-sm font-medium text-zinc-700">
@@ -1136,9 +1154,9 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                 <span>Subtotal</span>
                 <span>{formatRupiah(subtotal)}</span>
               </div>
-              {potongan > 0 && (
+              {(potongan > 0 || potonganNominal > 0) && (
                 <div className="flex items-center justify-between text-sm text-green-50">
-                  <span>Potongan Global ({potongan}%)</span>
+                  <span>Potongan Global{potongan > 0 ? ` (${potongan}%)` : ""}</span>
                   <span>-{formatRupiah(subtotal - dpp)}</span>
                 </div>
               )}
@@ -1262,9 +1280,9 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
               <span>Subtotal</span>
               <span>{formatRupiah(subtotal)}</span>
             </div>
-            {potongan > 0 && (
+            {(potongan > 0 || potonganNominal > 0) && (
               <div className="flex items-center justify-between text-sm text-zinc-600">
-                <span>Potongan Global ({potongan}%)</span>
+                <span>Potongan Global{potongan > 0 ? ` (${potongan}%)` : ""}</span>
                 <span>-{formatRupiah(subtotal - dpp)}</span>
               </div>
             )}
