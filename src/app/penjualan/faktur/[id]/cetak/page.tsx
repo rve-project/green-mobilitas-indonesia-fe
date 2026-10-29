@@ -140,6 +140,16 @@ function A4Document({
   pajakNominal,
 }: DocProps) {
   const kendaraanUtama = kendaraan[0];
+  const jasaItems = invoice.items.filter((item) => item.tipe === "jasa");
+  const barangItems = invoice.items.filter((item) => item.tipe === "barang");
+  const subtotalJasa = jasaItems.reduce(
+    (sum, item) => sum + hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0),
+    0,
+  );
+  const subtotalBarang = barangItems.reduce(
+    (sum, item) => sum + hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0),
+    0,
+  );
 
   return (
     <div className="relative mx-auto w-[210mm] bg-white p-[12mm] text-[13px] shadow-lg print:w-auto print:shadow-none">
@@ -209,34 +219,85 @@ function A4Document({
         </div>
       ) : (
         <>
-          <table className="mt-4 w-full border-collapse text-xs">
-            <thead>
-              <tr className="bg-green-600 text-left text-white">
-                <th className="px-2 py-1.5 font-semibold">Items</th>
-                <th className="px-2 py-1.5 text-right font-semibold">Qty</th>
-                <th className="px-2 py-1.5 font-semibold">Satuan</th>
-                <th className="px-2 py-1.5 text-right font-semibold">Harga</th>
-                <th className="px-2 py-1.5 text-right font-semibold">Diskon</th>
-                <th className="px-2 py-1.5 text-right font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.items.map((item, i) => {
-                const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
-                const rowDiskon = item.qty * item.hargaSatuan - rowTotal;
-                return (
-                  <tr key={`${item.itemId}-${i}`} className="border-b border-zinc-200">
-                    <td className="px-2 py-1.5">{item.nama}</td>
-                    <td className="px-2 py-1.5 text-right">{item.qty}</td>
-                    <td className="px-2 py-1.5">{item.tipe === "jasa" ? "Jasa" : (item.satuan ?? "-")}</td>
-                    <td className="px-2 py-1.5 text-right">{formatRupiah(item.hargaSatuan)}</td>
-                    <td className="px-2 py-1.5 text-right">{rowDiskon > 0 ? formatRupiah(rowDiskon) : "-"}</td>
-                    <td className="px-2 py-1.5 text-right">{formatRupiah(rowTotal)}</td>
+          {jasaItems.length > 0 && (
+            <>
+              <p className="mt-4 text-xs font-bold text-zinc-700">JASA / LAYANAN</p>
+              <table className="mt-1 w-full border-collapse text-xs">
+                <thead>
+                  <tr className="bg-green-600 text-left text-white">
+                    <th className="px-2 py-1.5 font-semibold">Items</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Qty</th>
+                    <th className="px-2 py-1.5 font-semibold">Satuan</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Harga</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Diskon</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Total</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {jasaItems.map((item, i) => {
+                    const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
+                    const rowDiskon = item.qty * item.hargaSatuan - rowTotal;
+                    return (
+                      <tr key={`jasa-${item.itemId}-${i}`} className="border-b border-zinc-200">
+                        <td className="px-2 py-1.5">{item.nama}</td>
+                        <td className="px-2 py-1.5 text-right">{item.qty}</td>
+                        <td className="px-2 py-1.5">Jasa</td>
+                        <td className="px-2 py-1.5 text-right">{formatRupiah(item.hargaSatuan)}</td>
+                        <td className="px-2 py-1.5 text-right">{rowDiskon > 0 ? formatRupiah(rowDiskon) : "-"}</td>
+                        <td className="px-2 py-1.5 text-right">{formatRupiah(rowTotal)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-t border-zinc-300">
+                    <td colSpan={5} className="px-2 py-1.5 text-right font-semibold">
+                      Subtotal Jasa
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-semibold">{formatRupiah(subtotalJasa)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {barangItems.length > 0 && (
+            <>
+              <p className="mt-4 text-xs font-bold text-zinc-700">BARANG / SPAREPART</p>
+              <table className="mt-1 w-full border-collapse text-xs">
+                <thead>
+                  <tr className="bg-green-600 text-left text-white">
+                    <th className="px-2 py-1.5 font-semibold">Items</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Qty</th>
+                    <th className="px-2 py-1.5 font-semibold">Satuan</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Harga</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Diskon</th>
+                    <th className="px-2 py-1.5 text-right font-semibold">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {barangItems.map((item, i) => {
+                    const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
+                    const rowDiskon = item.qty * item.hargaSatuan - rowTotal;
+                    return (
+                      <tr key={`barang-${item.itemId}-${i}`} className="border-b border-zinc-200">
+                        <td className="px-2 py-1.5">{item.nama}</td>
+                        <td className="px-2 py-1.5 text-right">{item.qty}</td>
+                        <td className="px-2 py-1.5">{item.satuan ?? "-"}</td>
+                        <td className="px-2 py-1.5 text-right">{formatRupiah(item.hargaSatuan)}</td>
+                        <td className="px-2 py-1.5 text-right">{rowDiskon > 0 ? formatRupiah(rowDiskon) : "-"}</td>
+                        <td className="px-2 py-1.5 text-right">{formatRupiah(rowTotal)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-t border-zinc-300">
+                    <td colSpan={5} className="px-2 py-1.5 text-right font-semibold">
+                      Subtotal Barang
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-semibold">{formatRupiah(subtotalBarang)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          )}
 
           <div className="mt-2 flex justify-end">
             <table className="w-60 text-xs">
@@ -314,6 +375,16 @@ function DotMatrixDocument({
   pajakNominal,
 }: DocProps) {
   const kendaraanUtama = kendaraan[0];
+  const jasaItems = invoice.items.filter((item) => item.tipe === "jasa");
+  const barangItems = invoice.items.filter((item) => item.tipe === "barang");
+  const subtotalJasa = jasaItems.reduce(
+    (sum, item) => sum + hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0),
+    0,
+  );
+  const subtotalBarang = barangItems.reduce(
+    (sum, item) => sum + hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0),
+    0,
+  );
 
   return (
     <div className="mx-auto w-[190mm] bg-white p-[8mm] text-[10px] leading-tight text-black shadow-lg print:w-auto print:shadow-none">
@@ -404,35 +475,83 @@ function DotMatrixDocument({
         </div>
       ) : (
         <>
-          <p className="mt-2 font-bold">JASA / LAYANAN</p>
-          <table className="w-full border-collapse border border-black">
-            <thead>
-              <tr>
-                <th className="border border-black px-2 py-1 text-left font-semibold">Layanan</th>
-                <th className="border border-black px-2 py-1 text-right font-semibold">Qty</th>
-                <th className="border border-black px-2 py-1 text-right font-semibold">Harga</th>
-                <th className="border border-black px-2 py-1 text-right font-semibold">Diskon</th>
-                <th className="border border-black px-2 py-1 text-right font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.items.map((item, i) => {
-                const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
-                const rowDiskon = item.qty * item.hargaSatuan - rowTotal;
-                return (
-                  <tr key={`${item.itemId}-${i}`}>
-                    <td className="border border-black px-2 py-1">{item.nama}</td>
-                    <td className="border border-black px-2 py-1 text-right">
-                      {item.qty} {item.tipe === "jasa" ? "" : (item.satuan ?? "")}
-                    </td>
-                    <td className="border border-black px-2 py-1 text-right">{formatRupiah(item.hargaSatuan)}</td>
-                    <td className="border border-black px-2 py-1 text-right">{rowDiskon > 0 ? formatRupiah(rowDiskon) : "-"}</td>
-                    <td className="border border-black px-2 py-1 text-right">{formatRupiah(rowTotal)}</td>
+          {jasaItems.length > 0 && (
+            <>
+              <p className="mt-2 font-bold">JASA / LAYANAN</p>
+              <table className="w-full border-collapse border border-black">
+                <thead>
+                  <tr>
+                    <th className="border border-black px-2 py-1 text-left font-semibold">Layanan</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Qty</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Harga</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Diskon</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Total</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {jasaItems.map((item, i) => {
+                    const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
+                    const rowDiskon = item.qty * item.hargaSatuan - rowTotal;
+                    return (
+                      <tr key={`jasa-${item.itemId}-${i}`}>
+                        <td className="border border-black px-2 py-1">{item.nama}</td>
+                        <td className="border border-black px-2 py-1 text-right">{item.qty}</td>
+                        <td className="border border-black px-2 py-1 text-right">{formatRupiah(item.hargaSatuan)}</td>
+                        <td className="border border-black px-2 py-1 text-right">{rowDiskon > 0 ? formatRupiah(rowDiskon) : "-"}</td>
+                        <td className="border border-black px-2 py-1 text-right">{formatRupiah(rowTotal)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td colSpan={4} className="border border-black px-2 py-1 text-right font-semibold">
+                      Subtotal Jasa
+                    </td>
+                    <td className="border border-black px-2 py-1 text-right font-semibold">{formatRupiah(subtotalJasa)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {barangItems.length > 0 && (
+            <>
+              <p className="mt-2 font-bold">BARANG / SPAREPART</p>
+              <table className="w-full border-collapse border border-black">
+                <thead>
+                  <tr>
+                    <th className="border border-black px-2 py-1 text-left font-semibold">Barang</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Qty</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Harga</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Diskon</th>
+                    <th className="border border-black px-2 py-1 text-right font-semibold">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {barangItems.map((item, i) => {
+                    const rowTotal = hitungTotalSetelahDiskon(item.qty * item.hargaSatuan, item.diskonTipe, item.diskonPersen, item.diskonRp ?? 0);
+                    const rowDiskon = item.qty * item.hargaSatuan - rowTotal;
+                    return (
+                      <tr key={`barang-${item.itemId}-${i}`}>
+                        <td className="border border-black px-2 py-1">{item.nama}</td>
+                        <td className="border border-black px-2 py-1 text-right">
+                          {item.qty} {item.satuan ?? ""}
+                        </td>
+                        <td className="border border-black px-2 py-1 text-right">{formatRupiah(item.hargaSatuan)}</td>
+                        <td className="border border-black px-2 py-1 text-right">{rowDiskon > 0 ? formatRupiah(rowDiskon) : "-"}</td>
+                        <td className="border border-black px-2 py-1 text-right">{formatRupiah(rowTotal)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td colSpan={4} className="border border-black px-2 py-1 text-right font-semibold">
+                      Subtotal Barang
+                    </td>
+                    <td className="border border-black px-2 py-1 text-right font-semibold">{formatRupiah(subtotalBarang)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          )}
 
           {/* Signatures (left) + totals box (right), same row like the reference */}
           <div className="mt-3 flex items-start justify-between gap-4">
