@@ -22,7 +22,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { Barang, DiskonTipe, Jasa, Kendaraan, Lokasi, Lookup, PajakSetting, Paket, Pelanggan } from "@/lib/types";
+import { Barang, DiskonTipe, Jasa, Kendaraan, Lokasi, Lookup, PajakSetting, Paket, Pelanggan, StatusPekerjaan } from "@/lib/types";
 import { formatDate, formatNumberId, formatRupiah, hitungTotalSetelahDiskon, parseNumberId } from "@/lib/format";
 import { hargaSatuanPaketItem } from "@/lib/paket";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
@@ -347,7 +347,10 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
   const [potonganPersen, setPotonganPersen] = useState("");
   const [potonganRp, setPotonganRp] = useState("");
   const [bebasPpn, setBebasPpn] = useState(false);
-  const [statusPekerjaan, setStatusPekerjaan] = useState<StatusPekerjaanCanonical>("selesai");
+  // Widened to the full StatusPekerjaan type (not just StatusPekerjaanCanonical) so an invoice
+  // still sitting at the legacy "menunggu_sparepart" value keeps showing that label here
+  // instead of silently flipping to "Antrian" the moment this form loads/saves.
+  const [statusPekerjaan, setStatusPekerjaan] = useState<StatusPekerjaan>("selesai");
   const [catatan, setCatatan] = useState("");
   const [dibayar, setDibayar] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -370,7 +373,9 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
       setPotonganPersen(invoice.potonganPersen ? String(invoice.potonganPersen) : "");
       setPotonganRp(invoice.potonganRp ? String(invoice.potonganRp) : "");
       setBebasPpn(Boolean(invoice.bebasPpn));
-      setStatusPekerjaan(normalizeStatusPekerjaan(invoice.statusPekerjaan));
+      setStatusPekerjaan(
+        invoice.statusPekerjaan === "menunggu_sparepart" ? "menunggu_sparepart" : normalizeStatusPekerjaan(invoice.statusPekerjaan),
+      );
       setCatatan(invoice.catatan ?? "");
       setExistingDibayar(invoice.dibayar);
       setWorkingItems(
@@ -1132,7 +1137,11 @@ export function InvoiceForm({ mode, invoiceId }: InvoiceFormProps) {
                 <Select
                   value={statusPekerjaan}
                   onChange={(v) => setStatusPekerjaan(v as StatusPekerjaanCanonical)}
-                  options={STATUS_PEKERJAAN_OPTIONS}
+                  options={
+                    statusPekerjaan === "menunggu_sparepart"
+                      ? [{ value: "menunggu_sparepart", label: "Menunggu Sparepart" }, ...STATUS_PEKERJAAN_OPTIONS]
+                      : STATUS_PEKERJAAN_OPTIONS
+                  }
                 />
               </label>
 

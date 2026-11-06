@@ -185,15 +185,19 @@ export interface Servis {
 
 export type StatusInvoice = "selesai" | "draft" | "dibatalkan";
 export type StatusPembayaran = "lunas" | "belum_dibayar" | "dibayar_setengah";
-// "belum_selesai" is a legacy value kept only so old stored invoices still read back as a
-// valid status -- new writes always use one of the four granular values below (see
-// src/lib/statusPekerjaan.ts for how legacy values are normalized for display/grouping).
+// "belum_selesai" and "menunggu_sparepart" are legacy values kept only so old stored invoices
+// still read back as a valid status -- new writes always use one of the seven granular values
+// below ("menunggu_sparepart" was split into inden_part/pending_part/part_susulan; see
+// src/lib/statusPekerjaan.ts for how legacy values are normalized/displayed).
 export type StatusPekerjaan =
   | "antrian"
   | "dikerjakan"
-  | "menunggu_sparepart"
+  | "inden_part"
+  | "pending_part"
+  | "part_susulan"
   | "selesai"
   | "diterima_customer"
+  | "menunggu_sparepart"
   | "belum_selesai";
 
 export interface InvoiceItem {

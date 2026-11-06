@@ -37,12 +37,19 @@ function StatusPekerjaanSelect({
   status: Invoice["statusPekerjaan"];
   onChange: (value: StatusPekerjaanCanonical) => void;
 }) {
+  // Legacy invoices still sitting at the old "menunggu_sparepart" value (now split into
+  // inden_part/pending_part/part_susulan) keep showing that original label here instead of
+  // being silently folded into "Antrian" -- picking any real status below replaces it for good.
+  const isLegacyMenungguSparepart = status === "menunggu_sparepart";
+  const options = isLegacyMenungguSparepart
+    ? [{ value: "menunggu_sparepart", label: "Menunggu Sparepart" }, ...STATUS_PEKERJAAN_OPTIONS]
+    : STATUS_PEKERJAAN_OPTIONS;
   return (
     <div className="relative">
       <Select
-        value={normalizeStatusPekerjaan(status)}
+        value={isLegacyMenungguSparepart ? "menunggu_sparepart" : normalizeStatusPekerjaan(status)}
         onChange={(v) => onChange(v as StatusPekerjaanCanonical)}
-        options={STATUS_PEKERJAAN_OPTIONS}
+        options={options}
         className="w-44"
       />
     </div>
@@ -118,9 +125,11 @@ export default function FakturPenjualanPage() {
   const STATUS_PEKERJAAN_ORDER: Record<StatusPekerjaanCanonical, number> = {
     antrian: 0,
     dikerjakan: 1,
-    menunggu_sparepart: 2,
-    selesai: 3,
-    diterima_customer: 4,
+    inden_part: 2,
+    pending_part: 3,
+    part_susulan: 4,
+    selesai: 5,
+    diterima_customer: 6,
   };
   const STATUS_PEMBAYARAN_ORDER: Record<Invoice["statusPembayaran"], number> = {
     belum_dibayar: 0,
