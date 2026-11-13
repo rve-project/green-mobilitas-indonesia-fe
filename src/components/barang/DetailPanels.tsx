@@ -1,13 +1,16 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
+import Link from "next/link";
 import clsx from "clsx";
 import { Ban, CheckCircle2, Package, Pencil, Trash2, Wrench, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
-import { Barang, Jasa, Paket, PaketItem, Supplier } from "@/lib/types";
+import { Barang, Invoice, Jasa, Paket, PaketItem, Pelanggan, Pembelian, Supplier } from "@/lib/types";
 import { formatDateLong, formatRupiah } from "@/lib/format";
 import { hargaSatuanPaketItem, hitungHargaPaket, subtotalPaketItem } from "@/lib/paket";
+import { EmptyState } from "@/components/ui/Panel";
+import { Pagination, paginate } from "@/components/ui/Pagination";
 
 function DrawerShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
@@ -111,16 +114,55 @@ function StatusBadge({ aktif }: { aktif: boolean }) {
 interface BarangDetailPanelProps {
   barang: Barang;
   supplierList: Supplier[];
+  pelangganList: Pelanggan[];
+  invoiceList: Invoice[];
+  pembelianList: Pembelian[];
   onClose: () => void;
   onEdit: () => void;
   onUpdated: (barang: Barang) => void;
   onDeleted: (id: string) => void;
 }
 
-export function BarangDetailPanel({ barang, supplierList, onClose, onEdit, onUpdated, onDeleted }: BarangDetailPanelProps) {
+export function BarangDetailPanel({
+  barang,
+  supplierList,
+  pelangganList,
+  invoiceList,
+  pembelianList,
+  onClose,
+  onEdit,
+  onUpdated,
+  onDeleted,
+}: BarangDetailPanelProps) {
   const [toggling, setToggling] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [penjualanPage, setPenjualanPage] = useState(1);
+  const [penjualanPageSize, setPenjualanPageSize] = useState(5);
+  const [pembelianPage, setPembelianPage] = useState(1);
+  const [pembelianPageSize, setPembelianPageSize] = useState(5);
   const supplierNama = supplierList.find((s) => s.id === barang.supplierId)?.nama;
+
+  const riwayatPenjualan = useMemo(
+    () =>
+      invoiceList
+        .filter((inv) => inv.items.some((i) => i.tipe === "barang" && i.itemId === barang.id))
+        .sort((a, b) => b.tanggal.localeCompare(a.tanggal)),
+    [invoiceList, barang.id]
+  );
+  const riwayatPembelian = useMemo(
+    () =>
+      pembelianList
+        .filter((p) => p.items.some((i) => i.itemId === barang.id))
+        .sort((a, b) => b.tanggal.localeCompare(a.tanggal)),
+    [pembelianList, barang.id]
+  );
+
+  function baris(items: { itemId: string; qty: number; hargaSatuan: number }[]) {
+    const lines = items.filter((i) => i.itemId === barang.id);
+    const qty = lines.reduce((sum, l) => sum + l.qty, 0);
+    const hargaSatuan = lines[0]?.hargaSatuan ?? 0;
+    return { qty, hargaSatuan };
+  }
 
   async function handleToggle() {
     setToggling(true);
@@ -227,6 +269,116 @@ export function BarangDetailPanel({ barang, supplierList, onClose, onEdit, onUpd
         <p className="mt-2 text-xs text-zinc-400">
           Total stok saat ini: <span className="font-semibold text-zinc-600">{barang.stok}</span>
         </p>
+      </Section>
+
+      <Section title={`Riwayat Penjualan (${riwayatPenjualan.length})`}>
+        {riwayatPenjualan.length === 0 ? (
+          <EmptyState label="Belum pernah terjual" />
+        ) : (
+          <>
+            <div className="overflow-x-auto rounded-lg border border-zinc-100">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-400">
+                    <th className="px-3 py-2 font-medium">Kode</th>
+                    <th className="px-3 py-2 font-medium">Pelanggan</th>
+                    <th className="px-3 py-2 font-medium">Tanggal</th>
+                    <th className="px-3 py-2 text-right font-medium">Qty</th>
+                    <th className="px-3 py-2 text-right font-medium">Harga</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {paginate(riwayatPenjualan, penjualanPage, penjualanPageSize).map((inv) => {
+                    const { qty, hargaSatuan } = baris(inv.items);
+                    return (
+                      <tr key={inv.id} className="relative hover:bg-zinc-50">
+                        <td className="px-3 py-2 font-semibold text-green-600">
+                          <Link
+                            href={`/penjualan/faktur/${inv.id}`}
+                            className="absolute inset-0"
+                            aria-label={`Lihat detail ${inv.kode}`}
+                          />
+                          {inv.kode}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-700">
+                          {pelangganList.find((p) => p.id === inv.pelangganId)?.nama ?? "-"}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-500">{formatDateLong(inv.tanggal)}</td>
+                        <td className="px-3 py-2 text-right text-zinc-700">{qty}</td>
+                        <td className="px-3 py-2 text-right text-zinc-700">{formatRupiah(hargaSatuan)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              page={penjualanPage}
+              pageSize={penjualanPageSize}
+              totalItems={riwayatPenjualan.length}
+              onPageChange={setPenjualanPage}
+              onPageSizeChange={(size) => {
+                setPenjualanPageSize(size);
+                setPenjualanPage(1);
+              }}
+            />
+          </>
+        )}
+      </Section>
+
+      <Section title={`Riwayat Pembelian (${riwayatPembelian.length})`}>
+        {riwayatPembelian.length === 0 ? (
+          <EmptyState label="Belum pernah dibeli" />
+        ) : (
+          <>
+            <div className="overflow-x-auto rounded-lg border border-zinc-100">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-400">
+                    <th className="px-3 py-2 font-medium">Kode</th>
+                    <th className="px-3 py-2 font-medium">Supplier</th>
+                    <th className="px-3 py-2 font-medium">Tanggal</th>
+                    <th className="px-3 py-2 text-right font-medium">Qty</th>
+                    <th className="px-3 py-2 text-right font-medium">Harga</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {paginate(riwayatPembelian, pembelianPage, pembelianPageSize).map((p) => {
+                    const { qty, hargaSatuan } = baris(p.items);
+                    return (
+                      <tr key={p.id} className="relative hover:bg-zinc-50">
+                        <td className="px-3 py-2 font-semibold text-green-600">
+                          <Link
+                            href={`/pembelian/faktur/${p.id}`}
+                            className="absolute inset-0"
+                            aria-label={`Lihat detail ${p.kode}`}
+                          />
+                          {p.kode}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-700">
+                          {supplierList.find((s) => s.id === p.supplierId)?.nama ?? "-"}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-500">{formatDateLong(p.tanggal)}</td>
+                        <td className="px-3 py-2 text-right text-zinc-700">{qty}</td>
+                        <td className="px-3 py-2 text-right text-zinc-700">{formatRupiah(hargaSatuan)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              page={pembelianPage}
+              pageSize={pembelianPageSize}
+              totalItems={riwayatPembelian.length}
+              onPageChange={setPembelianPage}
+              onPageSizeChange={(size) => {
+                setPembelianPageSize(size);
+                setPembelianPage(1);
+              }}
+            />
+          </>
+        )}
       </Section>
 
       <p className="text-xs text-zinc-400">Dibuat {formatDateLong(barang.createdAt)}</p>

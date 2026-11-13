@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Download, FileSpreadsheet, Plus, Search, Upload, X } from "lucide-react";
 import { api, ImportSummary } from "@/lib/api";
-import { Barang, Jasa, Paket, Supplier } from "@/lib/types";
+import { Barang, Invoice, Jasa, Paket, Pelanggan, Pembelian, Supplier } from "@/lib/types";
 import { formatRupiah } from "@/lib/format";
 import { hitungHargaPaket } from "@/lib/paket";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -40,6 +40,9 @@ export default function BarangJasaPage() {
   const [jasa, setJasa] = useState<Jasa[] | null>(null);
   const [paket, setPaket] = useState<Paket[] | null>(null);
   const [supplier, setSupplier] = useState<Supplier[]>([]);
+  const [pelanggan, setPelanggan] = useState<Pelanggan[]>([]);
+  const [invoiceList, setInvoiceList] = useState<Invoice[]>([]);
+  const [pembelianList, setPembelianList] = useState<Pembelian[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -79,6 +82,9 @@ export default function BarangJasaPage() {
   useEffect(() => {
     reloadCatalog();
     api.supplier().then(setSupplier);
+    api.pelanggan().then(setPelanggan);
+    api.invoice().then(setInvoiceList);
+    api.pembelian().then(setPembelianList);
   }, []);
 
   async function handleImportFile(file: File) {
@@ -337,6 +343,9 @@ export default function BarangJasaPage() {
         <BarangDetailPanel
           barang={detailBarang}
           supplierList={supplier}
+          pelangganList={pelanggan}
+          invoiceList={invoiceList}
+          pembelianList={pembelianList}
           onClose={() => setDetailBarang(null)}
           onEdit={() => {
             setEditBarang(detailBarang);
