@@ -3,7 +3,7 @@
 import { ReactNode, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { Ban, CheckCircle2, Package, Pencil, Trash2, Wrench, X } from "lucide-react";
+import { Ban, CheckCircle2, Package, Pencil, Printer, Trash2, Wrench, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
 import { Barang, Invoice, Jasa, Paket, PaketItem, Pelanggan, Pembelian, Supplier } from "@/lib/types";
@@ -270,6 +270,17 @@ export function BarangDetailPanel({
           Total stok saat ini: <span className="font-semibold text-zinc-600">{barang.stok}</span>
         </p>
       </Section>
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Riwayat Transaksi</p>
+        <Link
+          href={`/barang-jasa/riwayat/${barang.id}/cetak`}
+          className="flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700"
+        >
+          <Printer className="h-3.5 w-3.5" />
+          Cetak / Export
+        </Link>
+      </div>
 
       <Section title={`Riwayat Penjualan (${riwayatPenjualan.length})`}>
         {riwayatPenjualan.length === 0 ? (

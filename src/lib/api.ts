@@ -176,6 +176,9 @@ export const api = {
     const query = qs.toString();
     return get<PagedResult<Barang>>(`/barang${query ? `?${query}` : ""}`);
   },
+  getBarang: (id: string) => get<Barang>(`/barang/${id}`),
+  exportBarangRiwayatXlsx: (data: { sheets: { name: string; headers: string[]; rows: (string | number)[][] }[]; filename: string }) =>
+    downloadFilePost("/barang/export-riwayat", data.filename, data),
   jasa: (params?: { search?: string; kategori?: string; page?: number; limit?: number }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set("search", params.search);
