@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Download, FileSpreadsheet, Plus, Search, Upload, X } from "lucide-react";
 import { api, ImportSummary } from "@/lib/api";
-import { Barang, Invoice, Jasa, Paket, Pelanggan, Pembelian, Supplier } from "@/lib/types";
+import { Barang, Invoice, Jasa, Kendaraan, Paket, Pelanggan, Pembelian, Supplier } from "@/lib/types";
 import { formatRupiah } from "@/lib/format";
 import { hitungHargaPaket } from "@/lib/paket";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -43,6 +43,7 @@ export default function BarangJasaPage() {
   const [pelanggan, setPelanggan] = useState<Pelanggan[]>([]);
   const [invoiceList, setInvoiceList] = useState<Invoice[]>([]);
   const [pembelianList, setPembelianList] = useState<Pembelian[]>([]);
+  const [kendaraanList, setKendaraanList] = useState<Kendaraan[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -85,6 +86,7 @@ export default function BarangJasaPage() {
     api.pelanggan().then(setPelanggan);
     api.invoice().then(setInvoiceList);
     api.pembelian().then(setPembelianList);
+    api.kendaraan().then(setKendaraanList);
   }, []);
 
   async function handleImportFile(file: File) {
@@ -346,6 +348,7 @@ export default function BarangJasaPage() {
           pelangganList={pelanggan}
           invoiceList={invoiceList}
           pembelianList={pembelianList}
+          kendaraanList={kendaraanList}
           onClose={() => setDetailBarang(null)}
           onEdit={() => {
             setEditBarang(detailBarang);

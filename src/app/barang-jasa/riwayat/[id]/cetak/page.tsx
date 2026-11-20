@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
 import { api } from "@/lib/api";
-import { Barang, CompanyProfile, Invoice, Pelanggan, Pembelian, Supplier } from "@/lib/types";
+import { Barang, CompanyProfile, Invoice, Kendaraan, Pelanggan, Pembelian, Supplier } from "@/lib/types";
 import { formatDate, formatDateLong, formatRupiah } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { downloadElementAsPdf, openElementAsPdf } from "@/lib/pdfExport";
@@ -27,6 +27,7 @@ export default function CetakRiwayatBarangPage() {
   const [pembelianList, setPembelianList] = useState<Pembelian[]>([]);
   const [pelangganList, setPelangganList] = useState<Pelanggan[]>([]);
   const [supplierList, setSupplierList] = useState<Supplier[]>([]);
+  const [kendaraanList, setKendaraanList] = useState<Kendaraan[]>([]);
 
   const [downloading, setDownloading] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -44,6 +45,7 @@ export default function CetakRiwayatBarangPage() {
     api.pembelian().then(setPembelianList);
     api.pelanggan().then(setPelangganList);
     api.supplier().then(setSupplierList);
+    api.kendaraan().then(setKendaraanList);
   }, [id]);
 
   if (notFound) {
@@ -59,6 +61,15 @@ export default function CetakRiwayatBarangPage() {
   const riwayatPembelian = pembelianList
     .filter((p) => p.items.some((i) => i.itemId === barang.id))
     .sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+
+  function platNomor(inv: Invoice) {
+    return (
+      kendaraanList
+        .filter((k) => inv.kendaraanIds?.includes(k.id))
+        .map((k) => k.platNomor)
+        .join(", ") || "-"
+    );
+  }
 
   const tanggalCetak = new Date();
 
@@ -91,10 +102,17 @@ export default function CetakRiwayatBarangPage() {
         sheets: [
           {
             name: "Riwayat Penjualan",
-            headers: ["Kode Invoice", "Pelanggan", "Tanggal", "Qty", "Harga Satuan"],
+            headers: ["Kode Invoice", "Pelanggan", "Plat Nomor", "Tanggal", "Qty", "Harga Satuan"],
             rows: riwayatPenjualan.map((inv) => {
               const { qty, hargaSatuan } = barisItem(inv.items, barang!.id);
-              return [inv.kode, pelangganList.find((p) => p.id === inv.pelangganId)?.nama ?? "-", formatDateLong(inv.tanggal), qty, hargaSatuan];
+              return [
+                inv.kode,
+                pelangganList.find((p) => p.id === inv.pelangganId)?.nama ?? "-",
+                platNomor(inv),
+                formatDateLong(inv.tanggal),
+                qty,
+                hargaSatuan,
+              ];
             }),
           },
           {
@@ -208,6 +226,7 @@ export default function CetakRiwayatBarangPage() {
               <tr className="bg-green-600 text-white">
                 <th className="px-2 py-1.5 font-semibold">Kode Invoice</th>
                 <th className="px-2 py-1.5 font-semibold">Pelanggan</th>
+                <th className="px-2 py-1.5 font-semibold">Plat Nomor</th>
                 <th className="px-2 py-1.5 font-semibold">Tanggal</th>
                 <th className="px-2 py-1.5 text-right font-semibold">Qty</th>
                 <th className="px-2 py-1.5 text-right font-semibold">Harga Satuan</th>
@@ -220,6 +239,7 @@ export default function CetakRiwayatBarangPage() {
                   <tr key={inv.id} className="border-b border-zinc-100">
                     <td className="px-2 py-1.5 font-medium text-zinc-900">{inv.kode}</td>
                     <td className="px-2 py-1.5 text-zinc-700">{pelangganList.find((p) => p.id === inv.pelangganId)?.nama ?? "-"}</td>
+                    <td className="px-2 py-1.5 text-zinc-700">{platNomor(inv)}</td>
                     <td className="px-2 py-1.5 text-zinc-500">{formatDateLong(inv.tanggal)}</td>
                     <td className="px-2 py-1.5 text-right text-zinc-700">{qty}</td>
                     <td className="px-2 py-1.5 text-right text-zinc-700">{formatRupiah(hargaSatuan)}</td>

@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { Ban, CheckCircle2, Package, Pencil, Printer, Trash2, Wrench, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { confirmDelete } from "@/lib/confirm";
-import { Barang, Invoice, Jasa, Paket, PaketItem, Pelanggan, Pembelian, Supplier } from "@/lib/types";
+import { Barang, Invoice, Jasa, Kendaraan, Paket, PaketItem, Pelanggan, Pembelian, Supplier } from "@/lib/types";
 import { formatDateLong, formatRupiah } from "@/lib/format";
 import { hargaSatuanPaketItem, hitungHargaPaket, subtotalPaketItem } from "@/lib/paket";
 import { EmptyState } from "@/components/ui/Panel";
@@ -117,6 +117,7 @@ interface BarangDetailPanelProps {
   pelangganList: Pelanggan[];
   invoiceList: Invoice[];
   pembelianList: Pembelian[];
+  kendaraanList: Kendaraan[];
   onClose: () => void;
   onEdit: () => void;
   onUpdated: (barang: Barang) => void;
@@ -129,6 +130,7 @@ export function BarangDetailPanel({
   pelangganList,
   invoiceList,
   pembelianList,
+  kendaraanList,
   onClose,
   onEdit,
   onUpdated,
@@ -162,6 +164,15 @@ export function BarangDetailPanel({
     const qty = lines.reduce((sum, l) => sum + l.qty, 0);
     const hargaSatuan = lines[0]?.hargaSatuan ?? 0;
     return { qty, hargaSatuan };
+  }
+
+  function platNomor(inv: Invoice) {
+    return (
+      kendaraanList
+        .filter((k) => inv.kendaraanIds?.includes(k.id))
+        .map((k) => k.platNomor)
+        .join(", ") || "-"
+    );
   }
 
   async function handleToggle() {
@@ -293,6 +304,7 @@ export function BarangDetailPanel({
                   <tr className="border-b border-zinc-100 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-400">
                     <th className="px-3 py-2 font-medium">Kode</th>
                     <th className="px-3 py-2 font-medium">Pelanggan</th>
+                    <th className="px-3 py-2 font-medium">Plat Nomor</th>
                     <th className="px-3 py-2 font-medium">Tanggal</th>
                     <th className="px-3 py-2 text-right font-medium">Qty</th>
                     <th className="px-3 py-2 text-right font-medium">Harga</th>
@@ -314,6 +326,7 @@ export function BarangDetailPanel({
                         <td className="px-3 py-2 text-zinc-700">
                           {pelangganList.find((p) => p.id === inv.pelangganId)?.nama ?? "-"}
                         </td>
+                        <td className="px-3 py-2 text-zinc-700">{platNomor(inv)}</td>
                         <td className="px-3 py-2 text-zinc-500">{formatDateLong(inv.tanggal)}</td>
                         <td className="px-3 py-2 text-right text-zinc-700">{qty}</td>
                         <td className="px-3 py-2 text-right text-zinc-700">{formatRupiah(hargaSatuan)}</td>
